@@ -1,0 +1,399 @@
+/* 
+ * Custom CSS for Numerology Web App
+ * Modern, premium design with Hebrew RTL support
+ */
+
+/* ==================== CSS Variables ==================== */
+:root {
+    /* Color Palette - Mystical Purple & Teal */
+    --primary-purple: #6B46C1;
+    --primary-purple-light: #805AD5;
+    --primary-purple-dark: #553C9A;
+    --accent-teal: #14B8A6;
+    --accent-teal-light: #2DD4BF;
+    --accent-gold: #F59E0B;
+    
+    /* Backgrounds */
+    --bg-dark: #0F172A;
+    --bg-card: #1E293B;
+    --bg-card-hover: #334155;
+    --bg-gradient: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #2D1B69 100%);
+    
+    /* Text Colors */
+    --text-primary: #F8FAFC;
+    --text-secondary: #CBD5E1;
+    --text-muted: #94A3B8;
+    
+    /* Borders & Shadows */
+    --border-radius: 16px;
+    --border-radius-sm: 8px;
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+    --shadow-glow: 0 0 20px rgba(107, 70, 193, 0.3);
+}
+
+/* ==================== Global Styles ==================== */
+.stApp {
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    direction: rtl;
+    text-align: right;
+    font-family: 'Heebo', 'Segoe UI', Arial, sans-serif;
+}
+
+/* ==================== Typography ==================== */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary);
+    font-weight: 700;
+    text-align: right;
+    direction: rtl;
+    margin-bottom: 1rem;
+}
+
+h1 {
+    font-size: 2.5rem;
+    background: linear-gradient(135deg, var(--primary-purple-light), var(--accent-teal));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1.5rem;
+}
+
+h2 {
+    font-size: 1.875rem;
+    color: var(--accent-teal-light);
+}
+
+h3 {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+}
+
+p, div, span {
+    text-align: right;
+    direction: rtl;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
+/* ==================== Cards & Containers ==================== */
+.stApp > div > div {
+    background: transparent;
+}
+
+/* Glassmorphism Cards */
+[data-testid="stMetric"],
+[data-testid="stExpander"],
+.element-container {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+}
+
+[data-testid="stMetric"]:hover,
+[data-testid="stExpander"]:hover {
+    background: rgba(30, 41, 59, 0.9);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
+    border-color: var(--primary-purple);
+}
+
+/* ==================== Metrics & Numbers ==================== */
+[data-testid="stMetricValue"] {
+    font-size: 3rem !important;
+    font-weight: 800 !important;
+    background: linear-gradient(135deg, var(--accent-teal), var(--accent-gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+[data-testid="stMetricLabel"] {
+    color: var(--text-secondary) !important;
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+    text-align: right !important;
+}
+
+/* ==================== Buttons ==================== */
+.stButton > button {
+    background: linear-gradient(135deg, var(--primary-purple), var(--primary-purple-dark));
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    padding: 0.75rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-md);
+    width: 100%;
+}
+
+.stButton > button:hover {
+    background: linear-gradient(135deg, var(--primary-purple-light), var(--primary-purple));
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+.stButton > button:active {
+    transform: translateY(0);
+}
+
+/* Primary CTA Button */
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, var(--accent-teal), var(--accent-teal-light));
+    font-size: 1.25rem;
+    padding: 1rem 2.5rem;
+    box-shadow: 0 0 30px rgba(20, 184, 166, 0.4);
+}
+
+.stButton > button[kind="primary"]:hover {
+    background: linear-gradient(135deg, var(--accent-teal-light), var(--accent-teal));
+    box-shadow: 0 0 40px rgba(20, 184, 166, 0.6);
+}
+
+/* ==================== Inputs ==================== */
+.stTextInput > div > div > input,
+.stDateInput > div > div > input,
+.stSelectbox > div > div > select,
+.stNumberInput > div > div > input {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-primary);
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    text-align: right;
+    direction: rtl;
+}
+
+.stTextInput > div > div > input:focus,
+.stDateInput > div > div > input:focus,
+.stSelectbox > div > div > select:focus {
+    border-color: var(--primary-purple);
+    box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.2);
+    outline: none;
+}
+
+/* Input Labels */
+.stTextInput > label,
+.stDateInput > label,
+.stSelectbox > label,
+.stNumberInput > label {
+    color: var(--text-secondary) !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+    text-align: right !important;
+    direction: rtl !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* ==================== Sidebar ==================== */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #1E293B 0%, #0F172A 100%);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: var(--accent-teal-light);
+}
+
+/* ==================== Tabs ==================== */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px;
+    background: transparent;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0.5rem;
+}
+
+.stTabs [data-baseweb="tab"] {
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0;
+    color: var(--text-secondary);
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.stTabs [data-baseweb="tab"]:hover {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: var(--primary-purple);
+}
+
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
+    background: linear-gradient(135deg, var(--primary-purple), var(--primary-purple-dark));
+    color: white;
+    border-color: var(--primary-purple-light);
+}
+
+/* ==================== Expander ==================== */
+[data-testid="stExpander"] summary {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+    padding: 0.75rem;
+    background: rgba(107, 70, 193, 0.1);
+    border-radius: var(--border-radius-sm);
+    transition: all 0.3s ease;
+}
+
+[data-testid="stExpander"] summary:hover {
+    background: rgba(107, 70, 193, 0.2);
+}
+
+[data-testid="stExpander"][data-state="open"] summary {
+    background: rgba(107, 70, 193, 0.3);
+    border-bottom: 1px solid var(--primary-purple);
+}
+
+/* ==================== Info/Success/Error Boxes ==================== */
+.stSuccess {
+    background: rgba(16, 185, 129, 0.15);
+    border-left: 4px solid #10B981;
+    border-radius: var(--border-radius-sm);
+    color: #D1FAE5;
+}
+
+.stInfo {
+    background: rgba(20, 184, 166, 0.15);
+    border-left: 4px solid var(--accent-teal);
+    border-radius: var(--border-radius-sm);
+    color: #CCFBF1;
+}
+
+.stError {
+    background: rgba(239, 68, 68, 0.15);
+    border-left: 4px solid #EF4444;
+    border-radius: var(--border-radius-sm);
+    color: #FEE2E2;
+}
+
+/* ==================== Columns ==================== */
+[data-testid="column"] {
+    background: transparent;
+    padding: 0.5rem;
+}
+
+/* ==================== Hide Streamlit Branding ==================== */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+/* ==================== Custom Classes ==================== */
+
+/* Hero Section */
+.hero-section {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: linear-gradient(135deg, rgba(107, 70, 193, 0.2), rgba(20, 184, 166, 0.2));
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Pricing Card */
+.pricing-card {
+    background: rgba(30, 41, 59, 0.8);
+    border: 2px solid var(--primary-purple);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.pricing-card:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
+    border-color: var(--accent-teal);
+}
+
+/* Pythagorean Square Grid */
+.pytha-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 2rem auto;
+    max-width: 400px;
+}
+
+.pytha-cell {
+    background: rgba(30, 41, 59, 0.9);
+    border: 2px solid var(--primary-purple);
+    border-radius: var(--border-radius-sm);
+    padding: 1.5rem;
+    text-align: center;
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--accent-teal);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.pytha-cell:hover {
+    background: rgba(107, 70, 193, 0.3);
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-glow);
+}
+
+/* ==================== Animations ==================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* ==================== Responsive Design ==================== */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 2rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    [data-testid="stMetricValue"] {
+        font-size: 2rem !important;
+    }
+    
+    .pytha-grid {
+        gap: 0.5rem;
+        max-width: 300px;
+    }
+    
+    .pytha-cell {
+        font-size: 1.5rem;
+        padding: 1rem;
+    }
+}

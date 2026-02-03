@@ -17,40 +17,36 @@ import personal_y
 
 # --- Page Config ---
 st.set_page_config(
-    page_title="מחשבון נומרולוגי - Web",
+    page_title="מפה נומרולוגית מקצועית 🔮 | ניתוח אישי מעמיק",
     page_icon="🔮",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    menu_items={
+        'About': "מערכת מקצועית לניתוח נומרולוגי מעמיק. מבוסס על חכמת המספרים העתיקה."
+    }
 )
 
-# --- RTL Styling ---
-st.markdown("""
-<style>
-    .stApp {
-        direction: rtl;
-        text-align: right;
-    }
-    /* Reverse alignment for inputs/labels to feel natural in RTL */
-    .stTextInput > label, .stDateInput > label, .stSelectbox > label, .stNumberInput > label {
-        display: -webkit-box;
-        display: -ms-flexbox;
-        display: flex;
-        flex-direction: row-reverse;
-        justify-content: flex-start;
-        width: 100%;
-        margin-left: auto;
-    }
-    /* Fix for markdown headers alignment */
-    h1, h2, h3, h4, h5, h6, p, div {
-        text-align: right;
-    }
-    
-    /* Hide some default Streamlit hamburger menu/footer for cleaner look */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    
-</style>
-""", unsafe_allow_html=True)
+# --- Load Custom CSS ---
+def load_css():
+    css_file = os.path.join(os.path.dirname(__file__), "static", "custom.css")
+    if os.path.exists(css_file):
+        with open(css_file, encoding='utf-8') as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    else:
+        # Fallback basic RTL if custom CSS not found
+        st.markdown("""
+        <style>
+            .stApp {
+                direction: rtl;
+                text-align: right;
+            }
+            h1, h2, h3, h4, h5, h6, p, div {
+                text-align: right;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
+load_css()
 
 def _set_rtl_paragraph(paragraph):
     """ Helper function to set paragraph to RTL and right-aligned. """
@@ -151,9 +147,6 @@ def generate_docx_bytes(calc, gender_key, ai_report_text=None):
     return bio
 
 def main():
-    st.title("🔮 מערכת דוחות נומרולוגית (גרסת WEB)")
-    st.markdown("---")
-
     # Initialize Config
     config_manager = ConfigManager()
     
@@ -166,13 +159,47 @@ def main():
         st.session_state["gender_key"] = None
     if "ai_report_text" not in st.session_state:
         st.session_state["ai_report_text"] = None
+    if "user_email" not in st.session_state:
+        st.session_state["user_email"] = ""
+
+    # --- Hero Section (shown when no calculation yet) ---
+    if not st.session_state.get("calc_done"):
+        st.markdown("""
+        <div style='text-align: center; padding: 2rem 1rem;'>
+            <h1 style='font-size: 3rem; margin-bottom: 1rem;'>🔮 המפה הנומרולוגית שלך מחכה</h1>
+            <p style='font-size: 1.3rem; color: #CBD5E1; max-width: 700px; margin: 0 auto 2rem auto;'>
+                גלה את ייעודך האמיתי, החוזקות הנסתרות שלך, והתובנות המנחות לעת ידך הנוכחי.
+                מבוסס על חכמת המספרים העתיקה המשולבת עם AI מתקדם.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Value Proposition
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown("""
+            ### 🎯 ניתוח מדויק
+            חישובים נומרולוגיים מקצועיים המבוססים על שמך המלא ותאריך הלידה
+            """)
+        with col2:
+            st.markdown("""
+            ### 🤖 תובנות AI
+            המלצות מותאמות אישית על ידי בינה מלאכותית מתקדמת
+            """)
+        with col3:
+            st.markdown("""
+            ### 📊 דוח מקצועי
+            מסמך Word מעוצב ומפורט עם כל הפרשנויות
+            """)
 
     # --- Sidebar Inputs ---
     with st.sidebar:
-        st.header("פרטים אישיים")
+        st.header("📝 הזן את הפרטים שלך")
         
-        first_name = st.text_input("שם פרטי")
-        last_name = st.text_input("שם משפחה")
+        first_name = st.text_input("שם פרטי", placeholder="לדוגמה: דוד")
+        last_name = st.text_input("שם משפחה", placeholder="לדוגמה: כהן")
         
         # Date Input: Starts empty (None) for better UX
         dob = st.date_input(
@@ -185,12 +212,20 @@ def main():
         
         gender = st.selectbox("מין", ["זכר", "נקבה"])
         
-        calculate_btn = st.button("בצע חישוב", type="primary", use_container_width=True)
+        # Email input for order processing
+        user_email = st.text_input("כתובת Email (לקבלת הדוח)", 
+                                    value=st.session_state.get("user_email", ""),
+                                    placeholder="example@email.com")
+        if user_email:
+            st.session_state["user_email"] = user_email
+        
+        st.markdown("---")
+        calculate_btn = st.button("🔍 הצג תצוגה מקדימה", type="primary", use_container_width=True)
 
     # --- Calculations ---
     if calculate_btn:
         if not first_name or not last_name or dob is None:
-            st.error("אנא מלא את כל השדות, כולל תאריך לידה.")
+            st.error("⚠️ אנא מלא את כל השדות: שם פרטי, שם משפחה ותאריך לידה")
         else:
             # Prepare data for calculator
             day_str = str(dob.day).zfill(2)
@@ -202,7 +237,7 @@ def main():
             calc = NumerologyCalculator()
             
             try:
-                with st.spinner("מבצע חישוב וניתוח נתונים..."):
+                with st.spinner("🔮 מחשב את המפה הנומרולוגית שלך..."):
                     calc.calculate(day_str, month_str, year_str, first_name, last_name, gender_key)
                 
                 # Save to Session State
@@ -210,9 +245,10 @@ def main():
                 st.session_state["calc_obj"] = calc
                 st.session_state["gender_key"] = gender_key
                 st.session_state["ai_report_text"] = None # Reset AI report on new calculation
+                st.rerun()
                 
             except Exception as e:
-                st.error(f"אירעה שגיאה בעת חישוב הנתונים: {e}")
+                st.error(f"❌ אירעה שגיאה בעת חישוב הנתונים: {e}")
                 st.exception(e)
                 st.session_state["calc_done"] = False
 
@@ -221,7 +257,66 @@ def main():
         calc = st.session_state["calc_obj"]
         gender_key = st.session_state["gender_key"]
         
-        st.success(f"הדוח הופק עבור: {calc.full_name}")
+        # Success message with name
+        st.markdown(f"""
+        <div style='background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(20, 184, 166, 0.15)); 
+                    padding: 1.5rem; border-radius: 12px; border-right: 4px solid #10B981; margin-bottom: 2rem;'>
+            <h2 style='color: #D1FAE5; margin: 0;'>✨ המפה הנומרולוגית של {calc.full_name}</h2>
+            <p style='color: #CCFBF1; margin: 0.5rem 0 0 0;'>להלן תצוגה מקדימה של החישובים הבסיסיים שלך</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # --- Pricing / Order Section (at the top) ---
+        st.markdown("### 💎 הזמן את המפה המלאה שלך")
+        st.markdown("תצוגה זו כוללת רק חלק מהניתוח. קבל את הדוח המלא במייל תוך 24 שעות:")
+        
+        col_short, col_long = st.columns(2)
+        
+        with col_short:
+            st.markdown("""
+            <div style='background: rgba(107, 70, 193, 0.15); border: 2px solid #6B46C1; border-radius: 16px; padding: 2rem; text-align: center;'>
+                <h3 style='color: #E9D5FF; margin-top: 0;'>🌟 מפה קצרה</h3>
+                <p style='font-size: 2.5rem; font-weight: bold; color: #14B8A6; margin: 1rem 0;'>₪99</p>
+                <ul style='text-align: right; color: #CBD5E1; list-style: none; padding: 0;'>
+                    <li>✅ מספר ייעוד ופסגות</li>
+                    <li>✅ שנה אישית ויום לידה</li>
+                    <li>✅ דוח Word מעוצב</li>
+                    <li>✅ משלוח במייל תוך 24 שעות</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button("🛒 הזמן מפה קצרה", use_container_width=True, type="primary"):
+                st.session_state["order_type"] = "short"
+                st.markdown(f"""
+                <meta http-equiv="refresh" content="0; url=https://www.meshulam.co.il/purchase?b=dd556e28193228493a6cf2a4568b7cbd">
+                <p style='text-align: center; color: #14B8A6;'>מעביר אותך לעמוד התשלום... ⏳</p>
+                """, unsafe_allow_html=True)
+        
+        with col_long:
+            st.markdown("""
+            <div style='background: rgba(20, 184, 166, 0.15); border: 2px solid #14B8A6; border-radius: 16px; padding: 2rem; text-align: center;'>
+                <h3 style='color: #CCFBF1; margin-top: 0;'>💎 מפה ארוכה ומעמיקה</h3>
+                <p style='font-size: 2.5rem; font-weight: bold; color: #F59E0B; margin: 1rem 0;'>₪299</p>
+                <ul style='text-align: right; color: #CBD5E1; list-style: none; padding: 0;'>
+                    <li>✅ כל מה שבמפה הקצרה +</li>
+                    <li>✅ ריבוע פיתגורס מלא</li>
+                    <li>✅ ניתוח רבעונים</li>
+                    <li>✅ תובנות AI מתקדמות</li>
+                    <li>✅ דוח מקצועי בן 10+ עמודים</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button("🛒 הזמן מפה ארוכה", use_container_width=True, type="primary"):
+                st.session_state["order_type"] = "long"
+                st.markdown(f"""
+                <meta http-equiv="refresh" content="0; url=https://meshulam.co.il/purchase?b=19e85446f85d006f13a4a0b963a8b79d">
+                <p style='text-align: center; color: #14B8A6;'>מעביר אותך לעמוד התשלום... ⏳</p>
+                """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+
         
         # --- AI Section ---
         with st.expander("✨ שאל את ה-AI (המלצה אישית)", expanded=False):
