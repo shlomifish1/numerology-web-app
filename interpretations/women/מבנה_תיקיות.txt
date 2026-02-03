@@ -1,0 +1,875 @@
+Folder PATH listing for volume ãÖêè F
+Volume serial number is 4843-164F
+D:.
+≥   éÅêÑ_öâóâÖö.txt
+≥   
+√ƒƒƒbirth_day
+≥       10_f.txt
+≥       11_f.txt
+≥       12_f.txt
+≥       13_f.txt
+≥       14_f.txt
+≥       15_f.txt
+≥       16_f.txt
+≥       17_f.txt
+≥       18_f.txt
+≥       19_f.txt
+≥       1_f.txt
+≥       20_f.txt
+≥       21_f.txt
+≥       22_f.txt
+≥       23_f.txt
+≥       24_f.txt
+≥       25_f.txt
+≥       26_f.txt
+≥       27_f.txt
+≥       28_f.txt
+≥       29_f.txt
+≥       2_f.txt
+≥       30_f.txt
+≥       31_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒbirth_day_points
+≥       10_m.txt
+≥       11_m.txt
+≥       12_m.txt
+≥       13_m.txt
+≥       14_m.txt
+≥       15_m.txt
+≥       16_m.txt
+≥       17_m.txt
+≥       18_m.txt
+≥       19_m.txt
+≥       1_m.txt
+≥       20_m.txt
+≥       21_m.txt
+≥       22_m.txt
+≥       23_m.txt
+≥       24_m.txt
+≥       25_m.txt
+≥       26_m.txt
+≥       27_m.txt
+≥       28_m.txt
+≥       29_m.txt
+≥       2_m.txt
+≥       30_m.txt
+≥       31_m.txt
+≥       3_m.txt
+≥       4_m.txt
+≥       5_m.txt
+≥       6_m.txt
+≥       7_m.txt
+≥       8_m.txt
+≥       9_m.txt
+≥       
+√ƒƒƒbirth_day_reduced_career
+≥       1_m.txt
+≥       2_m.txt
+≥       3_m.txt
+≥       4_m.txt
+≥       5_m.txt
+≥       6_m.txt
+≥       7_m.txt
+≥       8_m.txt
+≥       9_m.txt
+≥       
+√ƒƒƒbirth_day_reduced_desc
+≥       11_f.txt
+≥       1_f.txt
+≥       22_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒbirth_month_reaction
+≥       10_f.txt
+≥       11_f.txt
+≥       12_f.txt
+≥       1_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒchallenges_interpretation
+≥       0_f.txt
+≥       1_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       
+√ƒƒƒcharacter
+≥       11_m.txt
+≥       1_m.txt.txt
+≥       22_m.txt
+≥       2_m.txt
+≥       3_m.txt
+≥       4_m.txt
+≥       5_m.txt
+≥       6_m.txt
+≥       7_m.txt
+≥       8_m.txt
+≥       9_m.txt
+≥       
+√ƒƒƒclothing_colors_by_hebrew_month
+≥       11_f.txt
+≥       12_f.txt
+≥       1_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒconsonants
+≥       1_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒcorrecting_aspect
+≥       1_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒdestiny
+≥       1_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒdestiny_career
+≥       1_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒdestiny_points
+≥       1_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒdiet_health_body
+≥       1_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒdiet_health_healing_code
+≥       1_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒdiet_health_nutrition
+≥       1_m.txt
+≥       2_m.txt
+≥       3_m.txt
+≥       4_m.txt
+≥       5_m.txt
+≥       6_m.txt
+≥       7_m.txt
+≥       8_m.txt
+≥       9_m.txt
+≥       
+√ƒƒƒdiet_health_spirit
+≥       1_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒhealth_sensitivity
+≥       1_m.txt
+≥       2_m.txt
+≥       3_m.txt
+≥       4_m.txt
+≥       5_m.txt
+≥       6_m.txt
+≥       7_m.txt
+≥       8_m.txt
+≥       9_m.txt
+≥       
+√ƒƒƒhebrew_date
+≥       calculation_note_m_m.txt
+≥       intro_m_m.txt
+≥       
+√ƒƒƒhebrew_day
+≥       10_f.txt
+≥       11_f.txt
+≥       12_f.txt
+≥       13_f.txt
+≥       14_f.txt
+≥       15_f.txt
+≥       16_f.txt
+≥       17_f.txt
+≥       18_f.txt
+≥       19_f.txt
+≥       1_f.txt
+≥       20_f.txt
+≥       21_f.txt
+≥       22_f.txt
+≥       23_f.txt
+≥       24_f.txt
+≥       25_f.txt
+≥       26_f.txt
+≥       27_f.txt
+≥       28_f.txt
+≥       29_f.txt
+≥       2_f.txt
+≥       30_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒhebrew_day_sgulot
+≥       1_m.txt
+≥       2_m.txt
+≥       3_m.txt
+≥       4_m.txt
+≥       5_m.txt
+≥       6_m.txt
+≥       7_m.txt
+≥       8_m.txt
+≥       9_m.txt
+≥       
+√ƒƒƒhebrew_destiny
+≥       1_m.txt
+≥       2_m.txt
+≥       3_m.txt
+≥       4_m.txt
+≥       5_m.txt
+≥       6_m.txt
+≥       7_m.txt
+≥       8_m.txt
+≥       9_m.txt
+≥       
+√ƒƒƒhebrew_month
+≥       10_f.txt
+≥       11_f.txt
+≥       12_f.txt
+≥       1_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒhidden_year
+≥       1_1_f.txt_f.txt
+≥       1_2_f.txt_f.txt
+≥       1_3_f.txt_f.txt
+≥       1_4_f.txt_f.txt
+≥       1_5_f.txt_f.txt
+≥       1_6_f.txt_f.txt
+≥       1_7_f.txt_f.txt
+≥       1_8_f.txt_f.txt
+≥       1_9_f.txt_f.txt
+≥       2_2_f.txt_f.txt
+≥       2_3_f.txt_f.txt
+≥       2_4_f.txt_f.txt
+≥       2_5_f.txt_f.txt
+≥       2_6_f.txt_f.txt
+≥       2_7_f.txt_f.txt
+≥       2_8_f.txt_f.txt
+≥       2_9_f.txt_f.txt
+≥       3_3_f.txt_f.txt
+≥       3_4_f.txt_f.txt
+≥       3_5_f.txt_f.txt
+≥       3_6_f.txt_f.txt
+≥       3_7_f.txt_f.txt
+≥       3_8_f.txt_f.txt
+≥       3_9_f.txt_f.txt
+≥       4_4_f.txt_f.txt
+≥       4_5_f.txt_f.txt
+≥       4_6_f.txt_f.txt
+≥       4_7_f.txt_f.txt
+≥       4_8_f.txt_f.txt
+≥       4_9_f.txt_f.txt
+≥       5_5_f.txt_f.txt
+≥       5_6_f.txt_f.txt
+≥       5_7_f.txt_f.txt
+≥       5_8_f.txt_f.txt
+≥       5_9_f.txt_f.txt
+≥       6_6_f.txt_f.txt
+≥       6_7_f.txt_f.txt
+≥       6_8_f.txt_f.txt
+≥       6_9_f.txt_f.txt
+≥       7_7_f.txt_f.txt
+≥       7_8_f.txt_f.txt
+≥       7_9_f.txt_f.txt
+≥       8_8_f.txt_f.txt
+≥       8_9_f.txt_f.txt
+≥       9_9_f.txt_f.txt
+≥       
+√ƒƒƒinterpretations
+≥   √ƒƒƒbirthdate_expression_type
+≥   ≥       3_m.txt
+≥   ≥       emotional_m.txt
+≥   ≥       intuitive_m.txt
+≥   ≥       mental_m.txt
+≥   ≥       physical_m.txt
+≥   ≥       
+≥   √ƒƒƒclothing_colors
+≥   ≥       10_m.txt
+≥   ≥       11_m.txt
+≥   ≥       12_m.txt
+≥   ≥       1_m.txt
+≥   ≥       2_m.txt
+≥   ≥       3_m.txt
+≥   ≥       4_m.txt
+≥   ≥       5_m.txt
+≥   ≥       6_m.txt
+≥   ≥       7_m.txt
+≥   ≥       8_m.txt
+≥   ≥       9_m.txt
+≥   ≥       
+≥   √ƒƒƒfirst_name_character
+≥   ≥       1_m.txt
+≥   ≥       2_m.txt
+≥   ≥       3_m.txt
+≥   ≥       4_m.txt
+≥   ≥       5_m.txt
+≥   ≥       6_m.txt
+≥   ≥       7_m.txt
+≥   ≥       8_m.txt
+≥   ≥       9_m.txt
+≥   ≥       
+≥   √ƒƒƒfirst_name_correcting
+≥   ≥       1_m.txt
+≥   ≥       2_m.txt
+≥   ≥       3_m.txt
+≥   ≥       4_m.txt
+≥   ≥       5_m.txt
+≥   ≥       6_m.txt
+≥   ≥       7_m.txt
+≥   ≥       8_m.txt
+≥   ≥       9_m.txt
+≥   ≥       
+≥   √ƒƒƒfirst_name_love
+≥   ≥       1_m.txt
+≥   ≥       2_m.txt
+≥   ≥       3_m.txt
+≥   ≥       4_m.txt
+≥   ≥       5_m.txt
+≥   ≥       6_m.txt
+≥   ≥       7_m.txt
+≥   ≥       8_m.txt
+≥   ≥       9_m.txt
+≥   ≥       
+≥   √ƒƒƒfirst_name_work
+≥   ≥       1_m.txt
+≥   ≥       2_m.txt
+≥   ≥       3_m.txt
+≥   ≥       4_m.txt
+≥   ≥       5_m.txt
+≥   ≥       6_m.txt
+≥   ≥       7_m.txt
+≥   ≥       8_m.txt
+≥   ≥       9_m.txt
+≥   ≥       
+≥   √ƒƒƒhebrew_month
+≥   ≥       10_m.txt
+≥   ≥       11_m.txt
+≥   ≥       12_m.txt
+≥   ≥       1_m.txt
+≥   ≥       2_m.txt
+≥   ≥       3_m.txt
+≥   ≥       4_m.txt
+≥   ≥       5_m.txt
+≥   ≥       6_m.txt
+≥   ≥       7_m.txt
+≥   ≥       8_m.txt
+≥   ≥       9_m.txt
+≥   ≥       
+≥   √ƒƒƒhuman_aspiration
+≥   ≥       1_m.txt
+≥   ≥       2_m.txt
+≥   ≥       3_m.txt
+≥   ≥       4_m.txt
+≥   ≥       5_m.txt
+≥   ≥       6_m.txt
+≥   ≥       7_m.txt
+≥   ≥       8_m.txt
+≥   ≥       9_m.txt
+≥   ≥       
+≥   √ƒƒƒmissions_negative
+≥   ≥       1_m.txt
+≥   ≥       2_m.txt
+≥   ≥       3_m.txt
+≥   ≥       4_m.txt
+≥   ≥       5_m.txt
+≥   ≥       6_m.txt
+≥   ≥       7_m.txt
+≥   ≥       8_m.txt
+≥   ≥       9_m.txt
+≥   ≥       
+≥   √ƒƒƒmissions_positive
+≥   ≥       1_m.txt
+≥   ≥       2_m.txt
+≥   ≥       3_m.txt
+≥   ≥       4_m.txt
+≥   ≥       5_m.txt
+≥   ≥       6_m.txt
+≥   ≥       7_m.txt
+≥   ≥       8_m.txt
+≥   ≥       9_m.txt
+≥   ≥       
+≥   √ƒƒƒname_expression_balanced
+≥   ≥       1_m.txt
+≥   ≥       2_m.txt
+≥   ≥       3_m.txt
+≥   ≥       4_m.txt
+≥   ≥       5_m.txt
+≥   ≥       6_m.txt
+≥   ≥       7_m.txt
+≥   ≥       8_m.txt
+≥   ≥       9_m.txt
+≥   ≥       
+≥   √ƒƒƒname_expression_multiple
+≥   ≥       1_m.txt
+≥   ≥       2_m.txt
+≥   ≥       3_m.txt
+≥   ≥       4_m.txt
+≥   ≥       5_m.txt
+≥   ≥       6_m.txt
+≥   ≥       7_m.txt
+≥   ≥       8_m.txt
+≥   ≥       9_m.txt
+≥   ≥       
+≥   √ƒƒƒname_expression_types
+≥   ≥       1_m.txt
+≥   ≥       2_m.txt
+≥   ≥       3_m.txt
+≥   ≥       4_m.txt
+≥   ≥       5_m.txt
+≥   ≥       6_m.txt
+≥   ≥       7_m.txt
+≥   ≥       8_m.txt
+≥   ≥       9_m.txt
+≥   ≥       general_note_m.txt
+≥   ≥       
+≥   √ƒƒƒnumber_groups
+≥   ≥       artistic_m.txt
+≥   ≥       business_m.txt
+≥   ≥       distribution_note_m.txt
+≥   ≥       scientific_m.txt
+≥   ≥       
+≥   √ƒƒƒpythagorean_square
+≥   ≥       arrow_123_absent_m.txt
+≥   ≥       arrow_123_present_m.txt
+≥   ≥       arrow_147_absent_m.txt
+≥   ≥       arrow_147_present_m.txt
+≥   ≥       arrow_159_absent_m.txt
+≥   ≥       arrow_159_present_m.txt
+≥   ≥       arrow_258_absent_m.txt
+≥   ≥       arrow_258_present_m.txt
+≥   ≥       arrow_357_absent_m.txt
+≥   ≥       arrow_357_present_m.txt
+≥   ≥       arrow_369_absent_m.txt
+≥   ≥       arrow_369_present_m.txt
+≥   ≥       arrow_456_absent_m.txt
+≥   ≥       arrow_456_present_m.txt
+≥   ≥       arrow_789_absent_m.txt
+≥   ≥       arrow_789_present_m.txt
+≥   ≥       dominant_1_m.txt
+≥   ≥       dominant_2_m.txt
+≥   ≥       dominant_3_m.txt
+≥   ≥       dominant_4_m.txt
+≥   ≥       dominant_5_m.txt
+≥   ≥       dominant_6_m.txt
+≥   ≥       dominant_7_m.txt
+≥   ≥       dominant_8_m.txt
+≥   ≥       dominant_9_m.txt
+≥   ≥       intro_m.txt
+≥   ≥       no_arrows_m.txt
+≥   ≥       number_1_meaning_m.txt
+≥   ≥       number_2_meaning_m.txt
+≥   ≥       number_3_meaning_m.txt
+≥   ≥       number_4_meaning_m.txt
+≥   ≥       number_5_meaning_m.txt
+≥   ≥       number_6_meaning_m.txt
+≥   ≥       number_7_meaning_m.txt
+≥   ≥       number_8_meaning_m.txt
+≥   ≥       number_9_meaning_m.txt
+≥   ≥       reading_principles_m.txt
+≥   ≥       
+≥   √ƒƒƒquarters_formulas
+≥   ≥       formulas_m.txt
+≥   ≥       
+≥   ¿ƒƒƒquarters_interpretation
+≥           11_m.txt
+≥           123_m.txt
+≥           124_m.txt
+≥           126_m.txt
+≥           128_m.txt
+≥           12_m.txt
+≥           135_m.txt
+≥           137_m.txt
+≥           139_m.txt
+≥           13_m.txt
+≥           146_m.txt
+≥           148_m.txt
+≥           149_m.txt
+≥           14_m.txt
+≥           15_m.txt
+≥           166_m.txt
+≥           16_m.txt
+≥           17_m.txt
+≥           18_m.txt
+≥           19_m.txt
+≥           224_m.txt
+≥           226_m.txt
+≥           227_m.txt
+≥           22_m.txt
+≥           233_m.txt
+≥           235_m.txt
+≥           236_m.txt
+≥           238_m.txt
+≥           23_m.txt
+≥           245_m.txt
+≥           246_m.txt
+≥           248_m.txt
+≥           24_m.txt
+≥           256_m.txt
+≥           257_m.txt
+≥           25_m.txt
+≥           26_m.txt
+≥           279_m.txt
+≥           27_m.txt
+≥           28_m.txt
+≥           29_m.txt
+≥           334_m.txt
+≥           335_m.txt
+≥           336_m.txt
+≥           33_m.txt
+≥           348_m.txt
+≥           349_m.txt
+≥           34_m.txt
+≥           356_m.txt
+≥           357_m.txt
+≥           358_m.txt
+≥           359_m.txt
+≥           35_m.txt
+≥           36_m.txt
+≥           37_m.txt
+≥           38_m.txt
+≥           39_m.txt
+≥           44_m.txt
+≥           45_m.txt
+≥           46_m.txt
+≥           477_m.txt
+≥           47_m.txt
+≥           488_m.txt
+≥           489_m.txt
+≥           48_m.txt
+≥           49_m.txt
+≥           559_m.txt
+≥           55_m.txt
+≥           56_m.txt
+≥           578_m.txt
+≥           579_m.txt
+≥           57_m.txt
+≥           58_m.txt
+≥           59_m.txt
+≥           667_m.txt
+≥           66_m.txt
+≥           678_m.txt
+≥           67_m.txt
+≥           68_m.txt
+≥           69_m.txt
+≥           778_m.txt
+≥           77_m.txt
+≥           78_m.txt
+≥           79_m.txt
+≥           88_m.txt
+≥           89_m.txt
+≥           99_m.txt
+≥           
+√ƒƒƒpeaks_interpretation
+≥       1_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒpeak_challenge_comb
+≥       10_f.txt
+≥       11_f.txt
+≥       12_f.txt
+≥       13_f.txt
+≥       14_f.txt
+≥       15_f.txt
+≥       16_f.txt
+≥       18_f.txt
+≥       20_f.txt
+≥       21_f.txt
+≥       22_f.txt
+≥       23_f.txt
+≥       24_f.txt
+≥       25_f.txt
+≥       27_f.txt
+≥       30_f.txt
+≥       31_f.txt
+≥       32_f.txt
+≥       33_f.txt
+≥       34_f.txt
+≥       35_f.txt
+≥       36_f.txt
+≥       38_f.txt
+≥       40_f.txt
+≥       41_f.txt
+≥       42_f.txt
+≥       43_f.txt
+≥       44_f.txt
+≥       45_f.txt
+≥       46_f.txt
+≥       47_f.txt
+≥       50_f.txt
+≥       51_f.txt
+≥       52_f.txt
+≥       53_f.txt
+≥       54_f.txt
+≥       55_f.txt
+≥       56_f.txt
+≥       60_f.txt
+≥       61_f.txt
+≥       62_f.txt
+≥       63_f.txt
+≥       64_f.txt
+≥       65_f.txt
+≥       66_f.txt
+≥       67_f.txt
+≥       70_f.txt
+≥       71_f.txt
+≥       72_f.txt
+≥       73_f.txt
+≥       74_f.txt
+≥       75_f.txt
+≥       76_f.txt
+≥       77_f.txt
+≥       80_f.txt
+≥       81_f.txt
+≥       82_f.txt
+≥       83_f.txt
+≥       84_f.txt
+≥       85_f.txt
+≥       86_f.txt
+≥       90_f.txt
+≥       91_f.txt
+≥       92_f.txt
+≥       93_f.txt
+≥       94_f.txt
+≥       95_f.txt
+≥       96_f.txt
+≥       97_f.txt
+≥       
+√ƒƒƒpersonal_year
+≥       1_f.txt
+≥       2_f.txt
+≥       3_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒprofessions
+≥       10_f.txt
+≥       11_f.txt
+≥       12_f.txt
+≥       13_f.txt
+≥       14_f.txt
+≥       15_f.txt
+≥       16_f.txt
+≥       17_f.txt
+≥       18_f.txt
+≥       19_f.txt
+≥       1_f.txt
+≥       20_f.txt
+≥       21_f.txt
+≥       22_f.txt
+≥       23_f.txt
+≥       25_f.txt
+≥       26_f.txt
+≥       27_f.txt
+≥       28_f.txt
+≥       29_f.txt
+≥       2_f.txt
+≥       30_f.txt
+≥       31_f.txt
+≥       32_f.txt
+≥       33_f.txt
+≥       34_f.txt
+≥       35_f.txt
+≥       36_f.txt
+≥       37_f.txt
+≥       38_f.txt
+≥       39_f.txt
+≥       3_f.txt
+≥       40_f.txt
+≥       41_f.txt
+≥       43_f.txt
+≥       44_f.txt
+≥       45_f.txt
+≥       46_f.txt
+≥       47_f.txt
+≥       48_f.txt
+≥       4_f.txt
+≥       5_f.txt
+≥       6_f.txt
+≥       7_f.txt
+≥       8_f.txt
+≥       9_f.txt
+≥       
+√ƒƒƒsoul_lessons
+≥       11_m.txt
+≥       12_m.txt
+≥       13_m.txt
+≥       14_m.txt
+≥       15_m.txt
+≥       16_m.txt
+≥       17_m.txt
+≥       18_m.txt
+≥       19_m.txt
+≥       20_m.txt
+≥       21_m.txt
+≥       22_m.txt
+≥       23_m.txt
+≥       24_m.txt
+≥       25_m.txt
+≥       26_m.txt
+≥       27_m.txt
+≥       28_m.txt
+≥       29_m.txt
+≥       30_m.txt
+≥       31_m.txt
+≥       32_m.txt
+≥       33_m.txt
+≥       34_m.txt
+≥       35_m.txt
+≥       36_m.txt
+≥       37_m.txt
+≥       38_m.txt
+≥       39_m.txt
+≥       40_m.txt
+≥       41_m.txt
+≥       42_m.txt
+≥       43_m.txt
+≥       44_m.txt
+≥       45_m.txt
+≥       46_m.txt
+≥       47_m.txt
+≥       48_m.txt
+≥       
+√ƒƒƒsoul_urge
+√ƒƒƒtable_correcting
+≥       1_m.txt
+≥       2_m.txt
+≥       3_m.txt
+≥       4_m.txt
+≥       5_m.txt
+≥       6_m.txt
+≥       7_m.txt
+≥       8_m.txt
+≥       9_m.txt
+≥       
+√ƒƒƒtable_promoting
+≥       1_m.txt
+≥       2_m.txt
+≥       3_m.txt
+≥       4_m.txt
+≥       5_m.txt
+≥       6_m.txt
+≥       7_m.txt
+≥       8_m.txt
+≥       9_m.txt
+≥       
+¿ƒƒƒvowels
+        0_m.txt
+        1_m.txt
+        2_m.txt
+        3_m.txt
+        4_m.txt
+        5_m.txt
+        6_m.txt
+        7_m.txt
+        8_m.txt
+        9_m.txt
+        
