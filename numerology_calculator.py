@@ -1,0 +1,350 @@
+# -*- coding: utf-8 -*-
+import os
+import sys
+import datetime
+import personal_y  # Assuming this module contains This_Year class and its methods
+import name  # Assuming this module contains NamesData class and its methods
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller. """
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+class NumerologyCalculator:
+    def __init__(self):
+        self.fulldate_list_for_pyth = None
+        self.real_year = None
+        self.real_month = None
+        self.full_list = None
+        self.shana_ishit = None
+        self.shana_nisteret = None
+        self.bd_month = None
+        self.first_pick = None
+        self.second_pick = None
+        self.third_pick = None
+        self.forth_pick = None
+        self.first_challenge = None
+        self.second_challenge = None
+        self.third_challenge = None
+        self.forth_challenge = None
+        self.peak1_reduced = None
+        self.peak2_reduced = None
+        self.peak3_reduced = None
+        self.peak4_reduced = None
+        self.challenge1_reduced = None
+        self.challenge2_reduced = None
+        self.challenge3_reduced = None
+        self.challenge4_reduced = None
+        self.first_pick_start = None
+        self.second_pick_start = None
+        self.third_pick_start = None
+        self.forth_pick_start = None
+        self.final_number_destiny = None
+        self.original_destiny_sum = None
+        self.p_year = None
+        self.p_month = None
+        self.p_day = None
+        self.full_date_short = None
+        
+        self.tzimtzum_age = None
+        self.age = None
+        self.full_date = None
+        self.full_name = None
+        self.first_name_str = None
+        self.last_name_str = None
+        self.first_name_val = None
+        self.full_name_val = None
+        self.itzurim_val = None
+        self.aiv_val = None
+        self.first_quarter_reduced = None
+        self.second_quarter_reduced = None
+        self.third_quarter_reduced = None
+        self.forth_quarter_reduced = None
+        self.quarter_sequences_2 = []
+        self.quarter_sequences_3 = []
+
+        
+    def short_number_single(self, args):
+        if args is None: return None
+        try:
+            abs_args = abs(int(args))
+            num_str = str(abs_args)
+        except ValueError:
+            return None
+        current_sum = abs_args
+        while len(num_str) > 1:
+            current_sum = sum(int(digit) for digit in num_str)
+            if current_sum <= 9: return current_sum
+            num_str = str(current_sum)
+        return int(num_str)
+
+    def short_number_master(self, args):
+        if args is None: return None
+        try:
+            abs_args = abs(int(args))
+            num_str = str(abs_args)
+        except ValueError:
+            return None
+        current_sum = abs_args
+        if len(num_str) == 1: return current_sum
+        current_sum = sum(int(digit) for digit in num_str)
+        if current_sum in [11, 22, 33]: return current_sum
+        num_str = str(current_sum)
+        while len(num_str) > 1:
+            current_sum = sum(int(digit) for digit in num_str)
+            if current_sum <= 9: return current_sum
+            num_str = str(current_sum)
+        return int(num_str)
+
+    def get_interpretation(self, category, number, gender_folder_param, is_hidden_year=False,
+                           is_peak_challenge_comb=False):
+        if number is None: return f"[שגיאה: מספר לא חושב עבור קטגוריה '{category}']"
+
+        # Correct logic for "men" / "women" vs folder names which are often lowercase
+        gender_folder_actual = "men" if gender_folder_param == "male" else "women"
+        suffix = "_m" if gender_folder_actual == "men" else "_f"
+
+        original_file_name_part = ""
+        alternative_file_name_part = None
+
+        if is_peak_challenge_comb:
+            original_file_name_part = str(number)
+        elif is_hidden_year and isinstance(number, str) and "_" in number:
+            original_file_name_part = number  # Expects number to be "X_Y"
+            parts = number.split('_')
+            if len(parts) == 2 and parts[0] != parts[1]:
+                alternative_file_name_part = f"{parts[1]}_{parts[0]}"
+        else:
+            original_file_name_part = str(number)
+
+        nested_interpretation_categories = [
+            "birthdate_expression_type", "clothing_colors", "first_name_N AI API",
+            "first_name_correcting", "first_name_love", "first_name_work",
+            "hebrew_month", "human_aspiration",
+            "missions_negative", "missions_positive",
+            "name_expression_balanced", "name_expression_multiple", "name_expression_types",
+            "number_groups", "pythagorean_square", "quarters_formulas", "quarters_interpretation"
+        ]
+
+        def try_read_file(current_category, current_file_name_part_to_try):
+            current_file_name = f"{current_file_name_part_to_try}{suffix}.txt"
+            if current_category in nested_interpretation_categories:
+                relative_path = os.path.join("interpretations", gender_folder_actual, "interpretations",
+                                             current_category, current_file_name)
+            else:
+                relative_path = os.path.join("interpretations", gender_folder_actual, current_category,
+                                             current_file_name)
+
+            path_to_check = resource_path(relative_path)
+            try:
+                with open(path_to_check, 'r', encoding='utf-8') as f:
+                    return f.read().strip(), None
+            except FileNotFoundError:
+                return None, f"[קובץ פרשנות לא נמצא: {path_to_check}]"
+            except Exception as e:
+                return None, f"[שגיאה בקריאת קובץ פרשנות {path_to_check}: {e}]"
+
+        content, error_msg_original = try_read_file(category, original_file_name_part)
+
+        if content is not None:
+            return content
+
+        if error_msg_original and error_msg_original.startswith("[קובץ פרשנות לא נמצא") and \
+                is_hidden_year and alternative_file_name_part:
+            content_alt, error_msg_alt = try_read_file(category, alternative_file_name_part)
+            if content_alt is not None:
+                return content_alt
+            else:
+                return error_msg_original
+
+        return error_msg_original
+    
+    def calc_quarters_michal_green(self):
+        # Calculate quarters based on peak/challenge or user logic
+        # (Copied from original birthdate.py logic)
+        if self.final_number_destiny is None or self.shana_ishit is None:
+            return
+
+        destiny = self.final_number_destiny
+        personal_year = self.shana_ishit
+        
+        # Quarter 1: (Destiny + Personal Year) - if > 9 reduce
+        q1_raw = destiny + personal_year
+        self.first_quarter_reduced = self.short_number_single(q1_raw)
+        
+        # Quarter 2: (Q1 + Personal Year)
+        q2_raw = self.first_quarter_reduced + personal_year
+        self.second_quarter_reduced = self.short_number_single(q2_raw)
+        
+        # Quarter 3: (Q2 + Q1)
+        q3_raw = self.second_quarter_reduced + self.first_quarter_reduced
+        self.third_quarter_reduced = self.short_number_single(q3_raw)
+        
+        # Quarter 4: (Personal Year + Q3)
+        q4_raw = personal_year + self.third_quarter_reduced
+        self.forth_quarter_reduced = self.short_number_single(q4_raw)
+        
+        # Sequences (User requested sequences of 2 and 3)
+        # Sequence of 2: Q1+Q2, Q2+Q3, Q3+Q4
+        self.quarter_sequences_2 = []
+        self.quarter_sequences_2.append(f"{self.first_quarter_reduced}{self.second_quarter_reduced}")
+        self.quarter_sequences_2.append(f"{self.second_quarter_reduced}{self.third_quarter_reduced}")
+        self.quarter_sequences_2.append(f"{self.third_quarter_reduced}{self.forth_quarter_reduced}")
+        
+        # Sequence of 3: Q1+Q2+Q3, Q2+Q3+Q4
+        self.quarter_sequences_3 = []
+        self.quarter_sequences_3.append(f"{self.first_quarter_reduced}{self.second_quarter_reduced}{self.third_quarter_reduced}")
+        self.quarter_sequences_3.append(f"{self.second_quarter_reduced}{self.third_quarter_reduced}{self.forth_quarter_reduced}")
+
+    def calculate(self, day, month, year, first_name, last_name, gender):
+        # Reset state
+        self.fulldate_list_for_pyth = None
+        self.real_year = None
+        self.real_month = None
+        self.full_list = None
+        
+        # Basic parsing
+        self.real_year = int(year)
+        self.real_month = int(month)
+        today = datetime.date.today()
+        
+        # --- Date Calculation ---
+        # Logic: Sum distinct digits, NOT the integer values of the parts.
+        
+        # 1. Day (Sum of digits)
+        day_digits_sum = sum(int(d) for d in day)
+        self.p_day = self.short_number_master(day_digits_sum)
+        
+        # 2. Month (Sum of digits)
+        month_digits_sum = sum(int(d) for d in month)
+        self.p_month = self.short_number_master(month_digits_sum)
+        
+        # 3. Year (Sum of digits)
+        year_digits_sum = sum(int(d) for d in year)
+        self.p_year = self.short_number_master(year_digits_sum)
+        
+        # Destiny (Sum of ALL digits)
+        full_date_str = f"{day}{month}{year}"
+        total_sum_digits = sum(int(d) for d in full_date_str)
+        
+        self.original_destiny_sum = total_sum_digits
+        self.full_date_short = total_sum_digits
+        self.final_number_destiny = self.short_number_master(total_sum_digits)
+        
+        # --- Names ---
+        self.full_name = f"{first_name} {last_name}".strip()
+        self.first_name_str = first_name
+        self.last_name_str = last_name
+        
+        # Calculate Name Values (Gematria)
+        names_data = name.NamesData()
+        
+        # 1. First Name
+        self.first_name_val = names_data.letter(self.first_name_str)
+        
+        # 2. Full Name
+        full_name_combined = self.first_name_str + self.last_name_str
+        self.full_name_val = names_data.letter(full_name_combined)
+        
+        # 3. Consonants (Itzurim)
+        # Filter letters that are defined as consonants in names_data.itzurim
+        consonants_list = list(filter(names_data.itzurim, full_name_combined))
+        self.itzurim_val = names_data.letter(consonants_list)
+        
+        # 4. Vowels (Aiv)
+        # Filter letters that are defined as vowels in names_data.aiv
+        vowels_list = list(filter(names_data.aiv, full_name_combined))
+        self.aiv_val = names_data.letter(vowels_list)
+        
+        # --- Personal Year & Age ---
+        py_calc = personal_y.This_Year()
+        
+        # 1. Personal Year
+        # Requires p_day, p_month (reduced) and real month
+        if self.p_day is not None and self.p_month is not None and self.real_month is not None:
+             self.shana_ishit = py_calc.shana_ishit(day=self.p_day, month=self.p_month, bd_month=self.real_month)
+        else:
+             self.shana_ishit = None
+
+        # 2. Age & Tzimtzum Age
+        if self.real_month is not None and self.real_year is not None:
+             self.age = py_calc.calculet_age(year_of_birth=self.real_year, bd_month=self.real_month)
+             self.tzimtzum_age = self.short_number_single(self.age) if self.age is not None else None
+        else:
+             self.age = None
+             self.tzimtzum_age = None
+             
+        # 3. Hidden Year (Shana Nisteret) - Restore original logic for "X_Y" format
+        # This logic was originally in birthdate.py and is distinct from personal_y.shana_nisteret
+        current_gregorian_year = today.year
+        universal_year_sum = sum(int(digit) for digit in str(current_gregorian_year))
+        universal_year_reduced = self.short_number_single(universal_year_sum)
+
+        if self.p_day is not None and self.p_month is not None and universal_year_reduced is not None and self.final_number_destiny is not None:
+            x_sum = self.p_day + self.p_month + universal_year_reduced
+            x_reduced = self.short_number_master(x_sum)
+            y_sum = x_reduced + self.final_number_destiny
+            y_reduced = self.short_number_master(y_sum)
+            self.shana_nisteret = f"{x_reduced}_{y_reduced}"
+        else:
+            self.shana_nisteret = None
+        
+        # --- Peaks & Challenges ---
+        # Reduced values for calculation
+        r_day = self.short_number_single(day)
+        r_month = self.short_number_single(month)
+        r_year = self.short_number_single(year)
+        
+        # Challenges
+        self.first_challenge = abs(r_day - r_month)
+        self.challenge1_reduced = self.short_number_single(self.first_challenge)
+        
+        self.second_challenge = abs(r_day - r_year)
+        self.challenge2_reduced = self.short_number_single(self.second_challenge)
+        
+        self.third_challenge = abs(self.first_challenge - self.second_challenge)
+        self.challenge3_reduced = self.short_number_single(self.third_challenge)
+        
+        self.forth_challenge = abs(r_month - r_year)
+        self.challenge4_reduced = self.short_number_single(self.forth_challenge)
+        
+        # Peaks
+        self.first_pick = r_day + r_month
+        self.peak1_reduced = self.short_number_single(self.first_pick)
+        
+        self.second_pick = r_day + r_year
+        self.peak2_reduced = self.short_number_single(self.second_pick)
+        
+        self.third_pick = self.first_pick + self.second_pick
+        self.peak3_reduced = self.short_number_single(self.third_pick)
+        
+        self.forth_pick = r_month + r_year
+        self.peak4_reduced = self.short_number_single(self.forth_pick)
+        
+        # Ages for peaks (Calculated based on Destiny Number)
+        # Peak 1 ends at (36 - Destiny)
+        if self.final_number_destiny:
+            self.first_pick_start = 36 - self.short_number_single(self.final_number_destiny)
+        else:
+            self.first_pick_start = 36 # Default fallback?
+            
+        self.second_pick_start = self.first_pick_start + 1 + 9 # +9 years cycle
+        self.third_pick_start = self.second_pick_start + 9
+        self.forth_pick_start = self.third_pick_start + 9
+        
+        # --- Quarters ---
+        self.calc_quarters_michal_green()
+        
+        return {
+            "p_day": self.p_day,
+            "p_month": self.p_month,
+            "p_year": self.p_year,
+            "final_number_destiny": self.final_number_destiny,
+            "full_name": self.full_name,
+            "age": self.age,
+            "shana_ishit": self.shana_ishit
+        }
+
