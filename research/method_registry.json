@@ -1,0 +1,46 @@
+{
+  "astrology": {
+    "key": "astrology",
+    "folder": "astrology",
+    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\astrology",
+    "display_name": "astrology",
+    "adapter": "astrology",
+    "enabled_for_research": true,
+    "enabled_for_customers": false,
+    "added_at": 1773432754.883713,
+    "notes": ""
+  },
+  "spirit": {
+    "key": "spirit",
+    "folder": "spirit",
+    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\spirit",
+    "display_name": "spirit",
+    "adapter": "spirit",
+    "enabled_for_research": true,
+    "enabled_for_customers": false,
+    "added_at": 1773433518.44369,
+    "notes": ""
+  },
+  "ספר_הנומרולוגיה_השלם": {
+    "key": "ספר_הנומרולוגיה_השלם",
+    "folder": "ספר הנומרולוגיה השלם",
+    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\ספר הנומרולוגיה השלם",
+    "display_name": "ספר הנומרולוגיה השלם",
+    "adapter": "green",
+    "enabled_for_research": true,
+    "enabled_for_customers": false,
+    "added_at": 1773432410.7247958,
+    "notes": ""
+  },
+  "pythagorean_existing": {
+    "key": "pythagorean_existing",
+    "folder": null,
+    "folder_path": null,
+    "display_name": "שיטת פיתגורס (קיימת)",
+    "adapter": "pythagorean",
+    "enabled_for_research": true,
+    "enabled_for_customers": true,
+    "added_at": 0,
+    "notes": "מסתמכת על name.py ו-numerology_calculator.py ללא שינוי."
+  }
+}

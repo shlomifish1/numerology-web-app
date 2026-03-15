@@ -1,69 +1,152 @@
 import os
-import google.generativeai as genai
+import sys
+from typing import Any, Dict, Optional
 
-def generate_person_report(data: dict, model_name: str = "gemini-flash-latest", api_key: str = None) -> str:
-    """
-    Generates a single personalized recommendation based on numerology data using Google Gemini.
+# Ensure ai_agents imports work
+PARENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PARENT_DIR not in sys.path:
+    sys.path.append(PARENT_DIR)
 
-    Expects data dict to include:
-        - full_name (str)
-        - birth_date (str, DDMMYYYY)
-        - personal_day, personal_month, personal_year (int)
-        - destiny_number (int)
-        - personal_year_number (int)
-        - hidden_year (int) or str
-        - age (int)
-        - life_peaks (list of int)
-        - challenges (list of int)
-        - quarters (list of int)
-        - gender (str): "זכר" or "נקבה"
-    """
-    # 1) Build Hebrew data lines
-    prompt_lines = [
-        f"שם מלא: {data['full_name']}",
-        f"תאריך לידה (DDMMYYYY): {data['birth_date']}",
-        f"מספר יום אישי: {data['personal_day']}",
-        f"מספר חודש אישי: {data['personal_month']}",
-        f"מספר שנה אישי: {data['personal_year']}",
-        f"מסלול חיים (Destiny): {data['destiny_number']}",
-        f"שנה אישית (Personal Year): {data['personal_year_number']}",
-        f"שנה נסתרת (Hidden Year): {data['hidden_year']}",
-        f"גיל נוכחי: {data['age']}",
-        f"שיאי חיים: {data['life_peaks']}",
-        f"אתגרים: {data['challenges']}",
-        f"מעגלים רבעוניים: {data['quarters']}",
-        f"מין: {data.get('gender', 'זכר')}",
+from ai_manager import ai_engine
+
+
+def _normalize_payload(
+    data_or_name: Any,
+    gender: Optional[str] = None,
+    destiny: Optional[int] = None,
+    personal_year: Optional[int] = None,
+    birth_day: Optional[int] = None,
+    missing_elements: Optional[list] = None,
+    green_context: Optional[Dict[str, object]] = None,
+) -> Dict[str, object]:
+    if isinstance(data_or_name, dict):
+        payload = dict(data_or_name)
+    else:
+        payload = {
+            'full_name': data_or_name,
+            'gender': gender,
+            'destiny_number': destiny,
+            'personal_year_number': personal_year,
+            'birth_day': birth_day,
+            'missing_elements': missing_elements or [],
+        }
+    if green_context and 'green_context' not in payload:
+        payload['green_context'] = green_context
+    return payload
+
+
+def _green_context_block(payload: Dict[str, object]) -> str:
+    green = payload.get('green_context') or {}
+    if not isinstance(green, dict) or not green:
+        return ''
+
+    name_analysis = green.get('name_analysis') or {}
+    as_vowel = name_analysis.get('as_vowel') or {}
+    soul = ((as_vowel.get('soul_expression') or {}).get('final'))
+    outer = ((as_vowel.get('outer_behavior') or {}).get('final'))
+    destiny_path = ((as_vowel.get('destiny_path') or {}).get('final'))
+    missing_info = green.get('missing_info') or {}
+    birthdate_analysis = green.get('birthdate_analysis') or {}
+    note = name_analysis.get('note') or ''
+
+    lines = [
+        '## הקשר נוסף לפי שיטת מיכל גרין (גימטריה מלאה)',
+        f'- ביטוי נשמה: {soul if soul is not None else "-"}',
+        f'- התנהגות מוחצנת: {outer if outer is not None else "-"}',
+        f'- שביל שם מלא: {destiny_path if destiny_path is not None else "-"}',
+        f"- מספרים חסרים: {missing_info.get('missing', [])}",
+        f"- מספרים מיטיבים: {missing_info.get('beneficial', [])}",
+        f"- מספרים עודפים: {missing_info.get('surplus', [])}",
+    ]
+    if birthdate_analysis:
+        lines.extend(
+            [
+                f"- גורל מתאריך לידה: {birthdate_analysis.get('destiny', '-')}",
+                f"- מחזורי חיים: {birthdate_analysis.get('life_cycles', '-')}",
+            ]
+        )
+    if note:
+        lines.append(f'- הערה על ו\': {note}')
+    return '\n'.join(lines)
+
+
+def _build_prompt(payload: Dict[str, object]) -> str:
+    life_peaks = payload.get('life_peaks') or []
+    challenges = payload.get('challenges') or []
+    quarters = payload.get('quarters') or []
+    green_block = _green_context_block(payload)
+
+    prompt = [
+        f"שם מלא: {payload.get('full_name', '-')}",
+        f"מין: {payload.get('gender', '-')}",
+        f"מסלול חיים (Destiny): {payload.get('destiny_number', '-')}",
+        f"שנה אישית (Personal Year): {payload.get('personal_year_number', payload.get('personal_year', '-'))}",
+        f"יום לידה מצומצם: {payload.get('birth_day', payload.get('personal_day', '-'))}",
+        f"שנה נסתרת: {payload.get('hidden_year', '-')}",
+        f"גיל: {payload.get('age', '-')}",
+        f"פסגות: {life_peaks}",
+        f"אתגרים: {challenges}",
+        f"רבעונים: {quarters}",
     ]
 
-    # 2) Compose the focused user prompt
-    user_prompt = (
-        "להלן כל הנתונים המתקבלים מתוך הנומרולוגיה והמשתמש:\n"
-        + "\n".join(prompt_lines)
-        + "\n\n"
-        + (
-            "הבקשה שלי: קח את כל הנתונים שלמעלה, וכתוב **המלצה אחת** מסודרת במספר שורות — "
-            "מה עלי לעשות כדי להגשים את הייעוד שלי, ואיך לפעול נכון עם המספרים שברשותי. "
-            "התאם את הלשון לפי המין: אם 'מין: נקבה', השתמש בלשון נקבה; אם 'מין: זכר', השתמש בלשון זכר. "
-            "כתוב עברית תקנית, קולחת, ללא שגיאות התאמה בין מין ומשתנה. "
-            "אנא תן חשיבה באיכות גבוהה, **לא** פירוט טכני של פירוש כל ספרה. "
-            "התוצאה צריכה להיות המלצה כללית אך מותאמת אישית."
-        )
+    missing = payload.get('missing_elements')
+    if missing:
+        prompt.append(f"מספרים חסרים: {missing}")
+    if green_block:
+        prompt.append('')
+        prompt.append(green_block)
+
+    prompt.append('')
+    prompt.append(
+        'הבקשה: כתוב המלצה אישית אחת, מדויקת ומעשית, בעברית בלבד. '
+        'שלב בין הנתונים הקלאסיים לבין שכבת Green אם היא קיימת. '
+        'אל תכתוב פירוט טכני יבש של כל מספר; תן הכוונה יישומית, רגשית והתפתחותית. '
+        'אם יש פער בין החישוב הרגיל לבין Green, הסבר זאת בקצרה כעומק נוסף ולא כסתירה.'
+    )
+    return '\n'.join(prompt)
+
+
+def generate_person_report(
+    data_or_name: Any,
+    gender: Optional[str] = None,
+    destiny: Optional[int] = None,
+    personal_year: Optional[int] = None,
+    birth_day: Optional[int] = None,
+    missing_elements: Optional[list] = None,
+    *,
+    model_name: str = 'gemini_2_flash',
+    api_key: Optional[str] = None,
+    green_context: Optional[Dict[str, object]] = None,
+) -> str:
+    """Generate a personalized numerology recommendation via the centralized AI engine."""
+    del api_key
+    payload = _normalize_payload(
+        data_or_name,
+        gender=gender,
+        destiny=destiny,
+        personal_year=personal_year,
+        birth_day=birth_day,
+        missing_elements=missing_elements,
+        green_context=green_context,
     )
 
-    try:
-        if api_key:
-            genai.configure(api_key=api_key)
-        
-        # 3) Call the Gemini model
-        model = genai.GenerativeModel(model_name)
-        
-        # Adding system instruction via prompt preamble since system_instruction is supported in newer SDKs
-        # or we can just prepend it to the user prompt for simplicity and compatibility.
-        system_instruction = "אתה מומחה בנומרולוגיה ובכתיבה בשפה העברית. ענה רק בעברית.\n\n"
-        final_prompt = system_instruction + user_prompt
+    system_instruction = 'אתה חייב לענות רק בעברית, ואתה מומחה בנומרולוגיה התפתחותית וניתוח תכונות אופי.'
+    user_prompt = _build_prompt(payload)
+    messages = [
+        {'role': 'system', 'content': system_instruction},
+        {'role': 'user', 'content': user_prompt},
+    ]
 
-        response = model.generate_content(final_prompt)
-        
-        return response.text.strip()
+    previous_model_key = getattr(ai_engine, 'current_model_key', None)
+    try:
+        if model_name:
+            switched, _ = ai_engine.switch_model(model_name)
+            if not switched:
+                print(f'{model_name} is unavailable, using current model for person report')
+        response = ai_engine.chat_completion(messages)
+        return (response or '').strip()
     except Exception as e:
-        return f"שגיאה ביצירת דוח AI: {str(e)}"
+        return f'[שגיאה בהפקת דוח AI]: {e}'
+    finally:
+        if previous_model_key and previous_model_key != getattr(ai_engine, 'current_model_key', None):
+            ai_engine.switch_model(previous_model_key)

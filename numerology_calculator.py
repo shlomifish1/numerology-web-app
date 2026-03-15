@@ -4,14 +4,17 @@ import sys
 import datetime
 import personal_y  # Assuming this module contains This_Year class and its methods
 import name  # Assuming this module contains NamesData class and its methods
+from name_gematria_green import MASTER_MEANINGS as GREEN_MASTER_MEANINGS, NamesDataGreen
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller. """
     try:
         base_path = sys._MEIPASS
     except Exception:
-        base_path = os.path.abspath(".")
+        base_path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_path, relative_path)
+
+MASTER_MEANINGS = GREEN_MASTER_MEANINGS
 
 class NumerologyCalculator:
     def __init__(self):
@@ -19,6 +22,10 @@ class NumerologyCalculator:
         self.real_year = None
         self.real_month = None
         self.full_list = None
+        self.original_day = None
+        self.original_month = None
+        self.original_year = None
+        self.green_snapshot = None
         self.shana_ishit = None
         self.shana_nisteret = None
         self.bd_month = None
@@ -47,6 +54,10 @@ class NumerologyCalculator:
         self.p_year = None
         self.p_month = None
         self.p_day = None
+        self.original_day = None
+        self.original_month = None
+        self.original_year = None
+        self.green_snapshot = None
         self.full_date_short = None
         
         self.tzimtzum_age = None
@@ -199,16 +210,36 @@ class NumerologyCalculator:
         self.quarter_sequences_3.append(f"{self.first_quarter_reduced}{self.second_quarter_reduced}{self.third_quarter_reduced}")
         self.quarter_sequences_3.append(f"{self.second_quarter_reduced}{self.third_quarter_reduced}{self.forth_quarter_reduced}")
 
+    def calc_green_snapshot(self, hebrew_birthdate=None):
+        if not self.first_name_str or not self.last_name_str:
+            return None
+        green = NamesDataGreen()
+        self.green_snapshot = green.analyze_full_name(
+            first_name=self.first_name_str,
+            last_name=self.last_name_str,
+            day=self.original_day,
+            month=self.original_month,
+            year=self.original_year,
+            hebrew_birthdate=hebrew_birthdate,
+        )
+        return self.green_snapshot
     def calculate(self, day, month, year, first_name, last_name, gender):
         # Reset state
         self.fulldate_list_for_pyth = None
         self.real_year = None
         self.real_month = None
         self.full_list = None
+        self.original_day = None
+        self.original_month = None
+        self.original_year = None
+        self.green_snapshot = None
         
         # Basic parsing
         self.real_year = int(year)
         self.real_month = int(month)
+        self.original_day = int(day)
+        self.original_month = int(month)
+        self.original_year = int(year)
         today = datetime.date.today()
         
         # --- Date Calculation ---
@@ -337,7 +368,10 @@ class NumerologyCalculator:
         
         # --- Quarters ---
         self.calc_quarters_michal_green()
-        
+
+        # --- Green Snapshot ---
+        self.calc_green_snapshot()
+
         return {
             "p_day": self.p_day,
             "p_month": self.p_month,
@@ -347,4 +381,11 @@ class NumerologyCalculator:
             "age": self.age,
             "shana_ishit": self.shana_ishit
         }
+
+
+
+
+
+
+
 

@@ -13,12 +13,13 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from numerology_calculator import NumerologyCalculator
 from config_manager import ConfigManager
 from gpt_report import generate_person_report
+from research.streamlit_panel import render_research_panel
 import personal_y
 
 # --- Page Config ---
 st.set_page_config(
     page_title="מפה נומרולוגית מקצועית 🔮 | ניתוח אישי מעמיק",
-    page_icon="🔮",
+    page_icon="ðŸ”®",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
@@ -329,7 +330,7 @@ def main():
                         # Prepare Data Dict
                         ai_data = {
                             "full_name": calc.full_name,
-                            "birth_date": f"{calc.p_day}{calc.p_month}{calc.p_year}", # Using original params might be safer if stored, but let's use calc props
+                            "birth_date": f"{calc.original_day:02d}{calc.original_month:02d}{calc.original_year}",
                             "personal_day": calc.p_day,
                             "personal_month": calc.p_month,
                             "personal_year": calc.p_year,
@@ -340,7 +341,8 @@ def main():
                             "life_peaks": [calc.peak1_reduced, calc.peak2_reduced, calc.peak3_reduced, calc.peak4_reduced],
                             "challenges": [calc.challenge1_reduced, calc.challenge2_reduced, calc.challenge3_reduced, calc.challenge4_reduced],
                             "quarters": [calc.first_quarter_reduced, calc.second_quarter_reduced, calc.third_quarter_reduced, calc.forth_quarter_reduced],
-                            "gender": "זכר" if gender_key == "male" else "נקבה"
+                            "gender": "זכר" if gender_key == "male" else "נקבה",
+                            "green_context": calc.calc_green_snapshot(),
                         }
                         # Call AI
                         report = generate_person_report(ai_data, model_name=config_manager.get("active_model", "gemini-flash-latest"), api_key=api_key)
@@ -424,5 +426,17 @@ def main():
     else:
         st.info("הזן פרטים בצד ימין ולחץ על 'בצע חישוב' כדי להתחיל.")
 
+
+    st.markdown("---")
+    with st.expander("מחקר פנימי", expanded=False):
+        render_research_panel(
+            prefix="web_research",
+            embedded=True,
+            title="מחקר נומרולוגי פנימי",
+            caption="פאנל מחקר פנימי עם סיסמה, השוואת שיטות, refresh ל-corpora וניהול אישורים.",
+        )
+
 if __name__ == "__main__":
     main()
+
+
