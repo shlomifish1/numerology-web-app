@@ -1,4 +1,4 @@
-"""Automatic discovery of research methods from the interpretations folder."""
+﻿"""Automatic discovery of research methods from the interpretations folder."""
 
 from __future__ import annotations
 
@@ -71,28 +71,40 @@ class MethodRegistry:
                     self._methods[key] = self._build_folder_method(folder_path)
                     changed = True
                 else:
-                    if self._methods[key].get("adapter") != adapter:
-                        self._methods[key]["adapter"] = adapter
+                    method = self._methods[key]
+                    if method.get("adapter") != adapter:
+                        method["adapter"] = adapter
                         changed = True
-                    self._methods[key]["folder_path"] = str(folder_path)
-                    self._methods[key]["folder"] = folder_path.name
-                    self._methods[key]["display_name"] = folder_path.name
+                    if method.get("folder_path") != str(folder_path):
+                        method["folder_path"] = str(folder_path)
+                        changed = True
+                    if method.get("folder") != folder_path.name:
+                        method["folder"] = folder_path.name
+                        changed = True
+                    if method.get("display_name") != folder_path.name:
+                        method["display_name"] = folder_path.name
+                        changed = True
 
-        if "pythagorean_existing" not in self._methods:
-            self._methods["pythagorean_existing"] = {
-                "key": "pythagorean_existing",
-                "folder": None,
-                "folder_path": None,
-                "display_name": "שיטת פיתגורס (קיימת)",
-                "adapter": "pythagorean",
-                "enabled_for_research": True,
-                "enabled_for_customers": True,
-                "added_at": 0,
-                "notes": "מסתמכת על name.py ו-numerology_calculator.py ללא שינוי.",
-            }
+        built_in_method = {
+            "key": "pythagorean_existing",
+            "folder": None,
+            "folder_path": None,
+            "display_name": "שיטת פיתגורס (קיימת)",
+            "adapter": "pythagorean",
+            "enabled_for_research": True,
+            "enabled_for_customers": True,
+            "added_at": 0,
+            "notes": "מסתמכת על name.py ו-numerology_calculator.py ללא שינוי.",
+        }
+        if self._methods.get("pythagorean_existing") != built_in_method:
+            self._methods["pythagorean_existing"] = built_in_method
             changed = True
 
-        removable = [key for key, method in self._methods.items() if key != "pythagorean_existing" and method.get("folder") and key not in existing_keys]
+        removable = [
+            key
+            for key, method in self._methods.items()
+            if key != "pythagorean_existing" and method.get("folder") and key not in existing_keys
+        ]
         for key in removable:
             del self._methods[key]
             changed = True
