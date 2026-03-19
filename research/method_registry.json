@@ -42,5 +42,27 @@
     "enabled_for_customers": true,
     "added_at": 0,
     "notes": "מסתמכת על name.py ו-numerology_calculator.py ללא שינוי."
+  },
+  "נומרולוגיה_לחישוב_עצמאי_אסתי_גוטמן_חוטר_גזע": {
+    "key": "נומרולוגיה_לחישוב_עצמאי_אסתי_גוטמן_חוטר_גזע",
+    "folder": "נומרולוגיה לחישוב עצמאי אסתי גוטמן חוטר גזע",
+    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\נומרולוגיה לחישוב עצמאי אסתי גוטמן חוטר גזע",
+    "display_name": "נומרולוגיה לחישוב עצמאי אסתי גוטמן חוטר גזע",
+    "adapter": "generic",
+    "enabled_for_research": true,
+    "enabled_for_customers": false,
+    "added_at": 1773944198.0122347,
+    "notes": ""
+  },
+  "נומרולוגיה_של_האלף_השלישי": {
+    "key": "נומרולוגיה_של_האלף_השלישי",
+    "folder": "נומרולוגיה של האלף השלישי",
+    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\נומרולוגיה של האלף השלישי",
+    "display_name": "נומרולוגיה של האלף השלישי",
+    "adapter": "generic",
+    "enabled_for_research": true,
+    "enabled_for_customers": false,
+    "added_at": 1773944198.0152361,
+    "notes": ""
   }
 }

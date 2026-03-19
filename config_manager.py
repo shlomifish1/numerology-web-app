@@ -5,7 +5,7 @@ CONFIG_FILE = "config.json"
 
 DEFAULT_CONFIG = {
     "api_keys": {
-        "google_ai": "AIzaSyDPevIx7UW4cWFZ_Hb0NGLLFrps-va-W2c",  # Pre-populated with known key
+        "google_ai": "",
         "openai": "",
         "hugging_face": ""
     },
