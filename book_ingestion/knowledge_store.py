@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence
 
@@ -58,6 +60,42 @@ class KnowledgeStore:
                     source TEXT NOT NULL DEFAULT 'rule',
                     FOREIGN KEY(book_id) REFERENCES books(id) ON DELETE CASCADE,
                     UNIQUE(book_id, category)
+                );
+
+                CREATE TABLE IF NOT EXISTS book_rules (
+                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    corpus        TEXT    NOT NULL,
+                    concept_key   TEXT    NOT NULL,
+                    concept_label TEXT    NOT NULL,
+                    calc_method   TEXT,
+                    interpretation_rules TEXT,
+                    source_chunks TEXT,
+                    confidence    REAL    NOT NULL DEFAULT 0.0,
+                    cabinet_used  INTEGER NOT NULL DEFAULT 0,
+                    created_at    TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at    TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(corpus, concept_key)
+                );
+
+                CREATE TABLE IF NOT EXISTS book_artifacts (
+                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    book_id       INTEGER NOT NULL,
+                    artifact_type TEXT NOT NULL DEFAULT 'raw',
+                    content_text  TEXT NOT NULL DEFAULT '',
+                    content_json  TEXT NOT NULL DEFAULT '{}',
+                    created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(book_id) REFERENCES books(id) ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS book_learning_log (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    corpus      TEXT NOT NULL,
+                    status      TEXT NOT NULL DEFAULT 'pending',
+                    progress    TEXT,
+                    error       TEXT,
+                    started_at  TEXT,
+                    finished_at TEXT,
+                    created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
                 """
             )
@@ -121,6 +159,14 @@ class KnowledgeStore:
                     'INSERT INTO book_categories (book_id, category, confidence, source) VALUES (?, ?, ?, ?)',
                     (book_id, item['category'], float(item.get('confidence', 0.0)), item.get('source', 'rule')),
                 )
+            connection.commit()
+
+    def save_book_artifact(self, book_id: int, artifact_type: str, content_text: str = '', content_json: Dict[str, object] | None = None) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                'INSERT INTO book_artifacts (book_id, artifact_type, content_text, content_json) VALUES (?, ?, ?, ?)',
+                (book_id, artifact_type, content_text, json.dumps(content_json or {}, ensure_ascii=False)),
+            )
             connection.commit()
 
     def sync_corpus_sources(self, corpus: str, valid_sources: Sequence[str]) -> None:
@@ -258,6 +304,107 @@ class KnowledgeStore:
             'extensions': [dict(r) for r in extension_rows],
             'readiness': readiness,
         }
+
+    # ── Book Rules helpers ──────────────────────────────────────────────
+
+    def save_book_rule(self, corpus: str, concept_key: str, concept_label: str,
+                       calc_method: str, interpretation_rules: str,
+                       source_chunks: str = "", confidence: float = 0.8,
+                       cabinet_used: bool = False) -> None:
+        now = datetime.utcnow().isoformat()
+        with self._connect() as conn:
+            conn.execute("""
+                INSERT INTO book_rules
+                    (corpus, concept_key, concept_label, calc_method,
+                     interpretation_rules, source_chunks, confidence, cabinet_used,
+                     created_at, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(corpus, concept_key) DO UPDATE SET
+                    calc_method=excluded.calc_method,
+                    interpretation_rules=excluded.interpretation_rules,
+                    confidence=excluded.confidence,
+                    cabinet_used=excluded.cabinet_used,
+                    updated_at=excluded.updated_at
+            """, (corpus, concept_key, concept_label, calc_method,
+                  interpretation_rules, source_chunks, confidence,
+                  int(cabinet_used), now, now))
+
+    def get_book_rules(self, corpus: str) -> List[Dict[str, object]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM book_rules WHERE corpus=? ORDER BY concept_key",
+                (corpus,)
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def get_all_corpora_with_rules(self) -> List[str]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT corpus FROM book_rules"
+            ).fetchall()
+            return [r["corpus"] for r in rows]
+
+    def set_learning_status(self, corpus: str, status: str, progress: str = "",
+                            error: str = "") -> None:
+        now = datetime.utcnow().isoformat()
+        with self._connect() as conn:
+            conn.execute("""
+                INSERT INTO book_learning_log (corpus, status, progress, error, started_at, finished_at, created_at)
+                VALUES (?,?,?,?,?,?,?)
+            """, (corpus, status, progress, error,
+                  now if status == "running" else None,
+                  now if status in ("done", "error") else None,
+                  now))
+
+    def get_learning_status(self, corpus: str) -> Optional[Dict[str, object]]:
+        with self._connect() as conn:
+            row = conn.execute("""
+                SELECT * FROM book_learning_log WHERE corpus=?
+                ORDER BY created_at DESC LIMIT 1
+            """, (corpus,)).fetchone()
+            return dict(row) if row else None
+
+    def list_learning_log(self, corpus: str | None = None, limit: int = 50) -> List[Dict[str, object]]:
+        query = 'SELECT * FROM book_learning_log'
+        params: List[object] = []
+        if corpus:
+            query += ' WHERE corpus = ?'
+            params.append(corpus)
+        query += ' ORDER BY created_at DESC LIMIT ?'
+        params.append(limit)
+        with self._connect() as conn:
+            rows = conn.execute(query, tuple(params)).fetchall()
+        return [dict(row) for row in rows]
+
+    def search_memory(self, query: str, corpus: str | None = None, limit: int = 20) -> List[Dict[str, object]]:
+        terms = [part.strip() for part in str(query or '').split() if part.strip()]
+        if not terms:
+            return []
+        clauses = []
+        params: List[object] = []
+        for term in terms:
+            pattern = f"%{term}%"
+            clauses.append("(b.title LIKE ? OR b.excerpt LIKE ? OR b.metadata_json LIKE ? OR c.content LIKE ? OR a.content_text LIKE ? OR r.interpretation_rules LIKE ?)")
+            params.extend([pattern, pattern, pattern, pattern, pattern, pattern])
+        query_sql = """
+            SELECT b.corpus, b.title, b.source_path, b.status, b.text_length, b.excerpt,
+                   c.content AS chunk_text,
+                   a.artifact_type, a.content_text AS artifact_text, a.content_json AS artifact_json,
+                   r.concept_key, r.concept_label, r.interpretation_rules, r.confidence
+            FROM books b
+            LEFT JOIN book_chunks c ON c.book_id = b.id
+            LEFT JOIN book_artifacts a ON a.book_id = b.id
+            LEFT JOIN book_rules r ON r.corpus = b.corpus
+        """
+        query_sql += " WHERE " + " AND ".join(clauses)
+        if corpus:
+            query_sql += " AND b.corpus = ?"
+            params.append(corpus)
+        query_sql += " ORDER BY b.updated_at DESC, b.title ASC LIMIT ?"
+        params.append(limit)
+        with self._connect() as conn:
+            rows = conn.execute(query_sql, tuple(params)).fetchall()
+        return [dict(row) for row in rows]
 
 
 

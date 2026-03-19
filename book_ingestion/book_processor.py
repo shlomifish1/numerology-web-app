@@ -42,27 +42,46 @@ class BookProcessor:
         book_id = self.store.upsert_book(record)
         if text:
             self.store.replace_chunks(book_id, self._chunk_text(text))
+        self.store.save_book_artifact(
+            book_id,
+            artifact_type='raw_extracted',
+            content_text=text[:12000] if text else '',
+            content_json=metadata,
+        )
         return {'book_id': book_id, 'record': record, 'metadata': metadata}
 
     def index_corpus(self, corpus: str, folder_path: str, method: Optional[str] = None) -> List[Dict[str, object]]:
         folder = Path(folder_path)
         results = []
         valid_sources: List[str] = []
+        self.store.set_learning_status(corpus, 'running', progress=f'Indexing {folder.name}')
+        encountered_error = False
         for path in sorted(folder.rglob('*')):
             if not path.is_file() or self._should_skip(path):
                 continue
-            valid_sources.append(str(path))
-            results.append(
-                self.add_book(
+            try:
+                result = self.add_book(
                     title=path.stem,
                     author='',
                     source_path=str(path),
                     corpus=corpus,
                     method=method,
                 )
-            )
+                valid_sources.append(str(path))
+                results.append(result)
+            except Exception as exc:
+                encountered_error = True
+                results.append({
+                    'error': str(exc),
+                    'source_path': str(path),
+                    'title': path.stem,
+                })
         self.store.sync_corpus_sources(corpus, valid_sources)
         self.store.purge_generated_records(corpus)
+        if encountered_error:
+            self.store.set_learning_status(corpus, 'error', error='One or more files failed during indexing')
+        else:
+            self.store.set_learning_status(corpus, 'done', progress=f'Indexed {len(valid_sources)} files')
         return results
 
     def export_markdown_catalog(self, corpus: str, output_path: str) -> str:

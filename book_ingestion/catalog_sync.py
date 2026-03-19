@@ -38,6 +38,21 @@ CORPORA: Dict[str, Dict[str, str]] = {
         'map': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\astrology\astrology_category_map.md',
         'method': 'astrology',
     },
+    'astrology_mediation': {
+        'folder': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\נומרולוגיה בתיווך האסטרולוגיה',
+        'catalog': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\נומרולוגיה בתיווך האסטרולוגיה\astrology_mediation_books.md',
+        'method': 'astrology_mediation',
+    },
+    'independent_calc': {
+        'folder': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\נומרולוגיה לחישוב עצמאי אסתי גוטמן חוטר גזע',
+        'catalog': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\נומרולוגיה לחישוב עצמאי אסתי גוטמן חוטר גזע\independent_calc_books.md',
+        'method': 'independent_calc',
+    },
+    'third_millennium': {
+        'folder': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\נומרולוגיה של האלף השלישי',
+        'catalog': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\נומרולוגיה של האלף השלישי\third_millennium_books.md',
+        'method': 'third_millennium',
+    },
 }
 
 RAW_BOOKS_FOLDER = r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\raw_books'

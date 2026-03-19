@@ -66,8 +66,9 @@ except ImportError:
 
 
 class OCREngine:
-    TEXT_EXTENSIONS = {'.txt', '.md', '.csv'}
+    TEXT_EXTENSIONS = {'.txt', '.md', '.csv', '.json', '.yaml', '.yml', '.xml', '.ini', '.cfg', '.log', '.py', '.js', '.ts'}
     HTML_EXTENSIONS = {'.html', '.htm'}
+    RTF_EXTENSIONS = {'.rtf'}
     IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp', '.bmp', '.tiff'}
     MIN_TEXT_CHARS = 80
 
@@ -106,6 +107,11 @@ class OCREngine:
             result['status'] = 'text_extracted'
             result['text'] = html.unescape(re.sub(r'\s+', ' ', text))
             return result
+        if extension in self.RTF_EXTENSIONS:
+            raw = path.read_text(encoding='utf-8', errors='ignore')
+            result['status'] = 'text_extracted'
+            result['text'] = self._extract_rtf_text(raw)
+            return result
         if extension == '.docx':
             result.update(self._extract_docx(path))
             return result
@@ -117,6 +123,10 @@ class OCREngine:
             return result
         if extension in self.IMAGE_EXTENSIONS:
             result.update(self._inspect_image(path))
+            return result
+        fallback = self._inspect_generic_text(path)
+        if fallback:
+            result.update(fallback)
             return result
         return result
 
@@ -217,6 +227,47 @@ class OCREngine:
             }
         except Exception as exc:
             return {'status': 'epub_error', 'text': '', 'metadata': {'error': str(exc)}}
+
+    def _extract_rtf_text(self, raw: str) -> str:
+        text = re.sub(r'\\par[d]?|\\line', '\n', raw)
+        text = re.sub(r'\\[a-zA-Z]+-?\d* ?', ' ', text)
+        text = re.sub(r'\\[{}\\]', ' ', text)
+        text = re.sub(r'{\\[^{}]*}|[{}]', ' ', text)
+        text = re.sub(r'\\u-?\d+\??', ' ', text)
+        text = re.sub(r'\s+', ' ', text)
+        return html.unescape(text).strip()
+
+    def _inspect_generic_text(self, path: Path) -> Dict[str, object] | None:
+        try:
+            data = path.read_bytes()
+        except Exception:
+            return None
+        if not data:
+            return None
+        sample = data[:8192]
+        if self._looks_binary(sample):
+            return None
+        for encoding in ('utf-8', 'utf-8-sig', 'cp1255', 'cp1252', 'latin-1'):
+            try:
+                text = data.decode(encoding, errors='strict')
+                break
+            except Exception:
+                text = ''
+        if not text.strip():
+            return None
+        return {
+            'status': 'text_extracted',
+            'text': re.sub(r'\s+', ' ', text).strip(),
+            'metadata': {'parser': f'generic-text:{path.suffix.lower() or "unknown"}'},
+        }
+
+    def _looks_binary(self, sample: bytes) -> bool:
+        if not sample:
+            return False
+        if b'\x00' in sample:
+            return True
+        printable = sum(1 for byte in sample if byte in b'\n\r\t\f\b' or 32 <= byte <= 126)
+        return (printable / len(sample)) < 0.7
 
     def _inspect_pdf(self, path: Path) -> Dict[str, object]:
         py_pdf_result = self._extract_pdf_text_with_pypdf2(path)
