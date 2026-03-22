@@ -250,7 +250,7 @@ def _poll_asset_job(token: str, job_id: str, max_wait: int = 30) -> str:
     raise TimeoutError("Canva asset upload timed out.")
 
 
-def create_blank_design(title: str, width: int = 794, height: int = 1123) -> dict:
+def create_blank_design(title: str, width: int = 794, height: int = 1123, asset_id: str | None = None) -> dict:
     """
     Create a blank custom-size design in Canva.
     Default: A4 at 96 dpi = 794×1123 px.
@@ -265,6 +265,8 @@ def create_blank_design(title: str, width: int = 794, height: int = 1123) -> dic
         },
         "title": title,
     }
+    if asset_id:
+        payload["asset_id"] = asset_id
     r = httpx.post(
         f"{CANVA_API_BASE}/designs",
         headers={
