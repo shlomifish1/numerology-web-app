@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Dict, List, Optional
 
 from .approval_store import ApprovalStore
@@ -49,6 +50,19 @@ def _short_text(value: object, limit: int = 260) -> str:
     if len(text) <= limit:
         return text
     return text[: max(0, limit - 1)].rstrip() + "…"
+
+
+def _parse_json_object(value: object) -> dict[str, object]:
+    if isinstance(value, dict):
+        return dict(value)
+    text = str(value or "").strip()
+    if not text:
+        return {}
+    try:
+        parsed = json.loads(text)
+    except Exception:
+        return {}
+    return dict(parsed) if isinstance(parsed, dict) else {}
 
 
 def _detail_label(key: object) -> str:
@@ -151,6 +165,84 @@ def _build_book_evidence_sections(
             memory_hits = store.search_memory(query, corpus=None, limit=max(8, limit * 2))
         except Exception:
             memory_hits = []
+        outline_hits = [hit for hit in memory_hits if str(hit.get("artifact_type") or "").strip().lower() == "book_outline"]
+        source_hits = outline_hits or memory_hits
+        book_seen: set[str] = set()
+        for hit in source_hits:
+            corpus = str(hit.get("corpus") or "").strip()
+            source_path = str(hit.get("source_path") or "").strip()
+            title = str(hit.get("title") or "").strip() or "ספר"
+            book_key = "|".join([corpus, source_path, title])
+            if book_key in book_seen:
+                continue
+            book_seen.add(book_key)
+            outline = _parse_json_object(hit.get("artifact_json"))
+            headings = [str(item).strip() for item in list(outline.get("headings") or []) if str(item).strip()]
+            keywords = [str(item).strip() for item in list(outline.get("keywords") or []) if str(item).strip()]
+            topic_candidates = [str(item).strip() for item in list(outline.get("topic_candidates") or []) if str(item).strip()]
+            summary_source = (
+                outline.get("summary")
+                or hit.get("artifact_text")
+                or hit.get("interpretation_rules")
+                or hit.get("excerpt")
+                or hit.get("metadata_json")
+                or ""
+            )
+            summary = _short_text(summary_source, 320)
+            if not summary and headings:
+                summary = " | ".join(headings[:2])
+            primary_topic = topic_candidates[0] if topic_candidates else (headings[0] if headings else title)
+            calculation_text = f"{len(headings)} כותרות · {len(keywords)} מילות מפתח · {len(summary.split())} מילים"
+            if calculation_text.startswith("0 כותרות") and not keywords:
+                calculation_text = "נגזר ממקור הספר, כותרות קיימות וטקסט מקורי שנשלף מהקובץ"
+            frequency_text = ", ".join(keywords[:5]) if keywords else _short_text(summary or title, 120)
+            _add_report_section(
+                sections,
+                seen,
+                key=f"outline:title:{source_path or title}",
+                title="כותרת",
+                value=title,
+                meaning=summary or title,
+                source=source_path or corpus,
+            )
+            _add_report_section(
+                sections,
+                seen,
+                key=f"outline:topic:{source_path or title}",
+                title="נושא",
+                value=primary_topic,
+                meaning=summary or f"זוהו {len(headings)} כותרות מתוך הספר.",
+                source=source_path or corpus,
+            )
+            _add_report_section(
+                sections,
+                seen,
+                key=f"outline:calc:{source_path or title}",
+                title="חישוב",
+                value=calculation_text,
+                meaning="החישוב נשען על כותרות, מילות מפתח ותמצית מבנית שנשלפו מהקובץ.",
+                source=source_path or corpus,
+            )
+            _add_report_section(
+                sections,
+                seen,
+                key=f"outline:meaning:{source_path or title}",
+                title="משמעות",
+                value=summary or primary_topic,
+                meaning=_short_text(hit.get("interpretation_rules") or hit.get("artifact_text") or hit.get("metadata_json") or "", 360),
+                source=source_path or corpus,
+            )
+            _add_report_section(
+                sections,
+                seen,
+                key=f"outline:frequency:{source_path or title}",
+                title="תדר",
+                value=frequency_text,
+                meaning=f"זוהו {len(keywords)} מילות מפתח רלוונטיות מתוך {title}.",
+                source=source_path or corpus,
+            )
+            if len(sections) >= limit:
+                break
         for hit in memory_hits:
             corpus = str(hit.get("corpus") or "").strip()
             concept = str(hit.get("concept_label") or hit.get("concept_key") or hit.get("title") or "").strip()

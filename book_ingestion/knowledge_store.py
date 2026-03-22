@@ -13,20 +13,44 @@ GENERATED_PATTERNS = ('%_books.md', '%_category_map.md', '%_ocr_queue.md', '%_ru
 
 
 class KnowledgeStore:
+    _schema_ready = False
+
     def __init__(self, db_path: Optional[Path] = None):
         self.db_path = Path(db_path or Path(__file__).with_name('numerology_books.db'))
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._ensure_schema()
+        if not KnowledgeStore._schema_ready:
+            self._ensure_schema()
+            KnowledgeStore._schema_ready = True
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.db_path)
+        connection = sqlite3.connect(self.db_path, timeout=30)
         connection.row_factory = sqlite3.Row
+        try:
+            connection.execute("PRAGMA busy_timeout = 30000")
+        except Exception:
+            pass
         return connection
 
     def _ensure_schema(self) -> None:
         with self._connect() as connection:
-            connection.executescript(
-                """
+            existing_tables = {
+                row["name"]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+            }
+            required_tables = {
+                "books",
+                "book_chunks",
+                "book_categories",
+                "book_rules",
+                "book_artifacts",
+                "book_learning_log",
+            }
+            if required_tables.issubset(existing_tables):
+                return
+
+            ddl = """
                 CREATE TABLE IF NOT EXISTS books (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     corpus TEXT NOT NULL,
@@ -97,8 +121,15 @@ class KnowledgeStore:
                     finished_at TEXT,
                     created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
-                """
-            )
+
+                CREATE INDEX IF NOT EXISTS idx_books_corpus_updated ON books(corpus, updated_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_books_source_path ON books(source_path);
+                CREATE INDEX IF NOT EXISTS idx_book_chunks_book_id ON book_chunks(book_id, chunk_index);
+                CREATE INDEX IF NOT EXISTS idx_book_artifacts_book_id ON book_artifacts(book_id, artifact_type);
+                CREATE INDEX IF NOT EXISTS idx_book_rules_corpus ON book_rules(corpus, concept_key);
+                CREATE INDEX IF NOT EXISTS idx_learning_log_corpus_created ON book_learning_log(corpus, created_at DESC);
+            """
+            connection.executescript(ddl)
             connection.commit()
 
     def upsert_book(self, record: Dict[str, object]) -> int:
@@ -427,46 +458,162 @@ class KnowledgeStore:
         terms = [part.strip() for part in str(query or '').split() if part.strip()]
         if not terms:
             return []
-        clauses = []
-        params: List[object] = []
-        for term in terms:
-            pattern = f"%{term.lower()}%"
-            clauses.append(
-                "("
-                "LOWER(b.title) LIKE ? OR "
-                "LOWER(b.excerpt) LIKE ? OR "
-                "LOWER(b.metadata_json) LIKE ? OR "
-                "LOWER(b.source_path) LIKE ? OR "
-                "LOWER(b.corpus) LIKE ? OR "
-                "LOWER(c.content) LIKE ? OR "
-                "LOWER(a.content_text) LIKE ? OR "
-                "LOWER(a.content_json) LIKE ? OR "
-                "LOWER(r.interpretation_rules) LIKE ? OR "
-                "LOWER(r.concept_label) LIKE ? OR "
-                "LOWER(r.concept_key) LIKE ?"
-                ")"
-            )
-            params.extend([pattern] * 11)
-        query_sql = """
-            SELECT b.corpus, b.title, b.source_path, b.status, b.text_length, b.excerpt, b.updated_at,
-                   b.metadata_json,
-                   c.content AS chunk_text,
-                   c.chunk_index,
-                   a.artifact_type, a.content_text AS artifact_text, a.content_json AS artifact_json,
-                   r.concept_key, r.concept_label, r.interpretation_rules, r.confidence
-            FROM books b
-            LEFT JOIN book_chunks c ON c.book_id = b.id
-            LEFT JOIN book_artifacts a ON a.book_id = b.id
-            LEFT JOIN book_rules r ON r.corpus = b.corpus
-        """
-        query_sql += " WHERE (" + " OR ".join(clauses) + ")"
-        if corpus:
-            query_sql += " AND b.corpus = ?"
-            params.append(corpus)
-        query_sql += " ORDER BY b.updated_at DESC, b.title ASC, COALESCE(c.chunk_index, 0) ASC LIMIT ?"
-        params.append(max(limit * 8, limit))
+        terms = terms[:8]
+        search_limit = max(limit * 6, 24)
+
+        def make_clause(prefix: str, fields: Sequence[str]) -> str:
+            return "(" + " OR ".join(f"LOWER({prefix}{field}) LIKE ?" for field in fields) + ")"
+
+        book_fields = ("title", "excerpt", "metadata_json", "source_path", "corpus")
+        chunk_fields = ("content",)
+        artifact_fields = ("content_text", "content_json")
+        rule_fields = ("interpretation_rules", "concept_label", "concept_key", "calc_method")
+
+        book_clauses = [make_clause("b.", book_fields) for _ in terms]
+        chunk_clauses = [make_clause("c.", chunk_fields) + " OR LOWER(b.title) LIKE ? OR LOWER(b.source_path) LIKE ? OR LOWER(b.corpus) LIKE ?" for _ in terms]
+        artifact_clauses = [make_clause("a.", artifact_fields) + " OR LOWER(b.title) LIKE ? OR LOWER(b.source_path) LIKE ? OR LOWER(b.corpus) LIKE ?" for _ in terms]
+        rule_clauses = [make_clause("r.", rule_fields) for _ in terms]
+
+        def bind_patterns(fields_per_clause: int) -> List[str]:
+            params: List[str] = []
+            for term in terms:
+                pattern = f"%{term.lower()}%"
+                params.extend([pattern] * fields_per_clause)
+            return params
+
+        rows: List[sqlite3.Row] = []
         with self._connect() as conn:
-            rows = conn.execute(query_sql, tuple(params)).fetchall()
+            book_sql = """
+                SELECT
+                    b.corpus, b.title, b.source_path, b.status, b.text_length, b.excerpt, b.updated_at,
+                    b.metadata_json,
+                    NULL AS chunk_text,
+                    NULL AS chunk_index,
+                    NULL AS artifact_type,
+                    NULL AS artifact_text,
+                    NULL AS artifact_json,
+                    NULL AS concept_key,
+                    NULL AS concept_label,
+                    NULL AS interpretation_rules,
+                    NULL AS confidence
+                FROM books b
+                WHERE {conditions}
+                {corpus_filter}
+                ORDER BY b.updated_at DESC, b.title ASC
+                LIMIT ?
+            """.format(
+                conditions=" AND ".join(book_clauses),
+                corpus_filter="AND b.corpus = ?" if corpus else "",
+            )
+            book_params: List[object] = bind_patterns(len(book_fields))
+            if corpus:
+                book_params.append(corpus)
+            book_params.append(search_limit)
+            rows.extend(conn.execute(book_sql, tuple(book_params)).fetchall())
+
+            chunk_sql = """
+                SELECT
+                    b.corpus, b.title, b.source_path, b.status, b.text_length, b.excerpt, b.updated_at,
+                    b.metadata_json,
+                    c.content AS chunk_text,
+                    c.chunk_index,
+                    NULL AS artifact_type,
+                    NULL AS artifact_text,
+                    NULL AS artifact_json,
+                    NULL AS concept_key,
+                    NULL AS concept_label,
+                    NULL AS interpretation_rules,
+                    NULL AS confidence
+                FROM book_chunks c
+                JOIN books b ON b.id = c.book_id
+                WHERE {conditions}
+                {corpus_filter}
+                ORDER BY b.updated_at DESC, b.title ASC, c.chunk_index ASC
+                LIMIT ?
+            """.format(
+                conditions=" AND ".join(chunk_clauses),
+                corpus_filter="AND b.corpus = ?" if corpus else "",
+            )
+            chunk_params: List[object] = []
+            for term in terms:
+                pattern = f"%{term.lower()}%"
+                chunk_params.extend([pattern] * len(chunk_fields))
+                chunk_params.extend([pattern, pattern, pattern])
+            if corpus:
+                chunk_params.append(corpus)
+            chunk_params.append(search_limit)
+            rows.extend(conn.execute(chunk_sql, tuple(chunk_params)).fetchall())
+
+            artifact_sql = """
+                SELECT
+                    b.corpus, b.title, b.source_path, b.status, b.text_length, b.excerpt, b.updated_at,
+                    b.metadata_json,
+                    NULL AS chunk_text,
+                    NULL AS chunk_index,
+                    a.artifact_type,
+                    a.content_text AS artifact_text,
+                    a.content_json AS artifact_json,
+                    NULL AS concept_key,
+                    NULL AS concept_label,
+                    NULL AS interpretation_rules,
+                    NULL AS confidence
+                FROM book_artifacts a
+                JOIN books b ON b.id = a.book_id
+                WHERE {conditions}
+                {corpus_filter}
+                ORDER BY b.updated_at DESC, b.title ASC, a.artifact_type ASC
+                LIMIT ?
+            """.format(
+                conditions=" AND ".join(artifact_clauses),
+                corpus_filter="AND b.corpus = ?" if corpus else "",
+            )
+            artifact_params: List[object] = []
+            for term in terms:
+                pattern = f"%{term.lower()}%"
+                artifact_params.extend([pattern] * len(artifact_fields))
+                artifact_params.extend([pattern, pattern, pattern])
+            if corpus:
+                artifact_params.append(corpus)
+            artifact_params.append(search_limit)
+            rows.extend(conn.execute(artifact_sql, tuple(artifact_params)).fetchall())
+
+            rule_sql = """
+                SELECT
+                    r.corpus,
+                    COALESCE(b.title, r.concept_label) AS title,
+                    COALESCE(b.source_path, 'interpretations/' || r.corpus || '/' || r.concept_key) AS source_path,
+                    COALESCE(b.status, 'learned') AS status,
+                    COALESCE(b.text_length, LENGTH(COALESCE(r.interpretation_rules, ''))) AS text_length,
+                    COALESCE(b.excerpt, r.interpretation_rules) AS excerpt,
+                    COALESCE(b.updated_at, r.updated_at) AS updated_at,
+                    COALESCE(b.metadata_json, '{{}}') AS metadata_json,
+                    NULL AS chunk_text,
+                    NULL AS chunk_index,
+                    NULL AS artifact_type,
+                    NULL AS artifact_text,
+                    NULL AS artifact_json,
+                    r.concept_key,
+                    r.concept_label,
+                    r.interpretation_rules,
+                    r.confidence
+                FROM book_rules r
+                LEFT JOIN books b
+                    ON b.corpus = r.corpus
+                    AND b.source_path NOT LIKE '%_books.md'
+                WHERE {conditions}
+                {corpus_filter}
+                ORDER BY r.updated_at DESC, r.concept_key ASC
+                LIMIT ?
+            """.format(
+                conditions=" AND ".join(rule_clauses),
+                corpus_filter="AND r.corpus = ?" if corpus else "",
+            )
+            rule_params: List[object] = bind_patterns(len(rule_fields))
+            if corpus:
+                rule_params.append(corpus)
+            rule_params.append(search_limit)
+            rows.extend(conn.execute(rule_sql, tuple(rule_params)).fetchall())
+
         deduped: List[Dict[str, object]] = []
         seen: set[str] = set()
         for row in rows:
