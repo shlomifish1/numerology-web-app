@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 
-SKIP_FOLDERS = {"men", "women", "raw_books", "book_ingestion", "__pycache__", ".git"}
+SKIP_FOLDERS = {"book_ingestion", "__pycache__", ".git", "raw_books"}
+DEFAULT_CUSTOMER_FOLDERS = {"men", "women"}
 ADAPTER_BY_FOLDER = {
     "ספר הנומרולוגיה השלם": "green",
     "spirit": "spirit",
@@ -52,7 +53,7 @@ class MethodRegistry:
             "display_name": folder_name,
             "adapter": adapter,
             "enabled_for_research": True,
-            "enabled_for_customers": False,
+            "enabled_for_customers": folder_name.lower() in DEFAULT_CUSTOMER_FOLDERS,
             "added_at": folder_path.stat().st_mtime,
             "notes": "",
         }
@@ -83,6 +84,10 @@ class MethodRegistry:
                         changed = True
                     if method.get("display_name") != folder_path.name:
                         method["display_name"] = folder_path.name
+                        changed = True
+                    default_customer = folder_path.name.lower() in DEFAULT_CUSTOMER_FOLDERS
+                    if default_customer and not method.get("enabled_for_customers", False):
+                        method["enabled_for_customers"] = True
                         changed = True
 
         built_in_method = {

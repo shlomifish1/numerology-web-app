@@ -30,6 +30,21 @@ CORPORA: Dict[str, Dict[str, str]] = {
         'map': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\spirit_category_map.md',
         'method': 'spirit',
     },
+    'men': {
+        'folder': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\men',
+        'catalog': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\men\men_books.md',
+        'method': 'generic',
+    },
+    'women': {
+        'folder': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\women',
+        'catalog': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\women\women_books.md',
+        'method': 'generic',
+    },
+    'more_books': {
+        'folder': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\more_books',
+        'catalog': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\more_books\more_books_books.md',
+        'method': 'generic',
+    },
     'astrology': {
         'folder': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\astrology',
         'catalog': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\astrology\astrology_books.md',

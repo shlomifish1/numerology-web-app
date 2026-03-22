@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+import re
 import datetime
 import personal_y  # Assuming this module contains This_Year class and its methods
 import name  # Assuming this module contains NamesData class and its methods
@@ -110,13 +111,124 @@ class NumerologyCalculator:
             num_str = str(current_sum)
         return int(num_str)
 
+    def _resolve_gender_context(self, gender_folder_param):
+        normalized = str(gender_folder_param or "").strip().lower()
+        if normalized in {"female", "women", "woman", "f", "נקבה"}:
+            return {
+                "target_gender": "female",
+                "target_folder": "women",
+                "target_suffix": "_f",
+                "alternate_gender": "male",
+                "alternate_folder": "men",
+                "alternate_suffix": "_m",
+            }
+        if normalized in {"male", "men", "man", "m", "זכר"}:
+            return {
+                "target_gender": "male",
+                "target_folder": "men",
+                "target_suffix": "_m",
+                "alternate_gender": "female",
+                "alternate_folder": "women",
+                "alternate_suffix": "_f",
+            }
+        return {
+            "target_gender": "male",
+            "target_folder": "men",
+            "target_suffix": "_m",
+            "alternate_gender": "female",
+            "alternate_folder": "women",
+            "alternate_suffix": "_f",
+        }
+
+    def _infer_source_gender(self, path_value: str) -> str | None:
+        path_text = str(path_value or "").replace("\\", "/").lower()
+        file_name = path_text.rsplit("/", 1)[-1]
+        if file_name.endswith("_m.txt"):
+            return "male"
+        if file_name.endswith("_f.txt"):
+            return "female"
+        if "/men/" in path_text:
+            return "male"
+        if "/women/" in path_text:
+            return "female"
+        return None
+
+    def _adapt_gender_text(self, text: str, source_gender: str | None, target_gender: str) -> str:
+        if not text or not source_gender or source_gender == target_gender:
+            return text
+
+        if source_gender == "male" and target_gender == "female":
+            replacements = [
+                (r"(^|[^\w])(ו?)הוא(?=$|[^\w])", r"\1\2היא"),
+                (r"(^|[^\w])(ו?)שלו(?=$|[^\w])", r"\1\2שלה"),
+                (r"(^|[^\w])(ו?)אותו(?=$|[^\w])", r"\1\2אותה"),
+                (r"(^|[^\w])(ו?)לו(?=$|[^\w])", r"\1\2לה"),
+                (r"(^|[^\w])(ו?)בו(?=$|[^\w])", r"\1\2בה"),
+                (r"(^|[^\w])(ו?)עצמו(?=$|[^\w])", r"\1\2עצמה"),
+                (r"(^|[^\w])(ו?)שולט(?=$|[^\w])", r"\1\2שולטת"),
+                (r"(^|[^\w])(ו?)מרגיש(?=$|[^\w])", r"\1\2מרגישה"),
+                (r"(^|[^\w])(ו?)עקשן(?=$|[^\w])", r"\1\2עקשנית"),
+                (r"(^|[^\w])(ו?)רכושן(?=$|[^\w])", r"\1\2רכושנית"),
+                (r"(^|[^\w])(ו?)קנאי(?=$|[^\w])", r"\1\2קנאית"),
+                (r"(^|[^\w])(ו?)ביקורתי(?=$|[^\w])", r"\1\2ביקורתית"),
+                (r"(^|[^\w])(ו?)עצמאי(?=$|[^\w])", r"\1\2עצמאית"),
+                (r"(^|[^\w])(ו?)אקטיבי(?=$|[^\w])", r"\1\2אקטיבית"),
+                (r"(^|[^\w])(ו?)מצטיין(?=$|[^\w])", r"\1\2מצטיינת"),
+                (r"\bמומלץ להיות עצמאי\b", "מומלץ להיות עצמאית"),
+                (r"\bהרעיונות המקוריים שלו\b", "הרעיונות המקוריים שלה"),
+            ]
+        elif source_gender == "female" and target_gender == "male":
+            replacements = [
+                (r"(^|[^\w])(ו?)היא(?=$|[^\w])", r"\1\2הוא"),
+                (r"(^|[^\w])(ו?)שלה(?=$|[^\w])", r"\1\2שלו"),
+                (r"(^|[^\w])(ו?)אותה(?=$|[^\w])", r"\1\2אותו"),
+                (r"(^|[^\w])(ו?)לה(?=$|[^\w])", r"\1\2לו"),
+                (r"(^|[^\w])(ו?)בה(?=$|[^\w])", r"\1\2בו"),
+                (r"(^|[^\w])(ו?)עצמה(?=$|[^\w])", r"\1\2עצמו"),
+                (r"(^|[^\w])(ו?)שולטת(?=$|[^\w])", r"\1\2שולט"),
+                (r"(^|[^\w])(ו?)מרגישה(?=$|[^\w])", r"\1\2מרגיש"),
+                (r"(^|[^\w])(ו?)עקשנית(?=$|[^\w])", r"\1\2עקשן"),
+                (r"(^|[^\w])(ו?)רכושנית(?=$|[^\w])", r"\1\2רכושן"),
+                (r"(^|[^\w])(ו?)קנאית(?=$|[^\w])", r"\1\2קנאי"),
+                (r"(^|[^\w])(ו?)ביקורתית(?=$|[^\w])", r"\1\2ביקורתי"),
+                (r"(^|[^\w])(ו?)עצמאית(?=$|[^\w])", r"\1\2עצמאי"),
+                (r"(^|[^\w])(ו?)אקטיבית(?=$|[^\w])", r"\1\2אקטיבי"),
+                (r"(^|[^\w])(ו?)מצטיינת(?=$|[^\w])", r"\1\2מצטיין"),
+                (r"\bמומלץ להיות עצמאית\b", "מומלץ להיות עצמאי"),
+                (r"\bהרעיונות המקוריים שלה\b", "הרעיונות המקוריים שלו"),
+            ]
+        else:
+            return text
+
+        adapted = text
+        for pattern, replacement in replacements:
+            adapted = re.sub(pattern, replacement, adapted)
+        return adapted
+
+    def render_interpretation(self, category, number, gender_folder_param, is_hidden_year=False,
+                              is_peak_challenge_comb=False):
+        """
+        Public wrapper for all export and UI paths.
+        Keeps gender resolution and auto-adaptation in one place.
+        """
+        return self.get_interpretation(
+            category,
+            number,
+            gender_folder_param,
+            is_hidden_year=is_hidden_year,
+            is_peak_challenge_comb=is_peak_challenge_comb,
+        )
+
     def get_interpretation(self, category, number, gender_folder_param, is_hidden_year=False,
                            is_peak_challenge_comb=False):
         if number is None: return f"[שגיאה: מספר לא חושב עבור קטגוריה '{category}']"
 
-        # Correct logic for "men" / "women" vs folder names which are often lowercase
-        gender_folder_actual = "men" if gender_folder_param == "male" else "women"
-        suffix = "_m" if gender_folder_actual == "men" else "_f"
+        gender_context = self._resolve_gender_context(gender_folder_param)
+        gender_folder_actual = gender_context["target_folder"]
+        suffix = gender_context["target_suffix"]
+        alternate_folder = gender_context["alternate_folder"]
+        alternate_suffix = gender_context["alternate_suffix"]
+        target_gender = gender_context["target_gender"]
 
         original_file_name_part = ""
         alternative_file_name_part = None
@@ -140,38 +252,48 @@ class NumerologyCalculator:
             "number_groups", "pythagorean_square", "quarters_formulas", "quarters_interpretation"
         ]
 
-        def try_read_file(current_category, current_file_name_part_to_try):
-            current_file_name = f"{current_file_name_part_to_try}{suffix}.txt"
+        def try_read_file(folder_name, file_suffix, current_category, current_file_name_part_to_try):
+            current_file_name = f"{current_file_name_part_to_try}{file_suffix}.txt"
             if current_category in nested_interpretation_categories:
-                relative_path = os.path.join("interpretations", gender_folder_actual, "interpretations",
+                relative_path = os.path.join("interpretations", folder_name, "interpretations",
                                              current_category, current_file_name)
             else:
-                relative_path = os.path.join("interpretations", gender_folder_actual, current_category,
+                relative_path = os.path.join("interpretations", folder_name, current_category,
                                              current_file_name)
 
             path_to_check = resource_path(relative_path)
             try:
                 with open(path_to_check, 'r', encoding='utf-8') as f:
-                    return f.read().strip(), None
+                    return f.read().strip(), path_to_check
             except FileNotFoundError:
-                return None, f"[קובץ פרשנות לא נמצא: {path_to_check}]"
+                return None, path_to_check
             except Exception as e:
-                return None, f"[שגיאה בקריאת קובץ פרשנות {path_to_check}: {e}]"
+                return f"[שגיאה בקריאת קובץ פרשנות {path_to_check}: {e}]", path_to_check
 
-        content, error_msg_original = try_read_file(category, original_file_name_part)
+        candidate_specs = [
+            (gender_folder_actual, suffix),
+            (gender_folder_actual, alternate_suffix),
+            (alternate_folder, suffix),
+            (alternate_folder, alternate_suffix),
+        ]
 
-        if content is not None:
-            return content
+        file_name_parts = [original_file_name_part]
+        if is_hidden_year and alternative_file_name_part and alternative_file_name_part not in file_name_parts:
+            file_name_parts.append(alternative_file_name_part)
 
-        if error_msg_original and error_msg_original.startswith("[קובץ פרשנות לא נמצא") and \
-                is_hidden_year and alternative_file_name_part:
-            content_alt, error_msg_alt = try_read_file(category, alternative_file_name_part)
-            if content_alt is not None:
-                return content_alt
-            else:
-                return error_msg_original
+        last_error = None
+        for file_name_part in file_name_parts:
+            for folder_name, file_suffix in candidate_specs:
+                content, path_or_error = try_read_file(folder_name, file_suffix, category, file_name_part)
+                if content is None:
+                    last_error = f"[קובץ פרשנות לא נמצא: {path_or_error}]"
+                    continue
+                if isinstance(content, str) and content.startswith("[שגיאה בקריאת קובץ פרשנות"):
+                    return content
+                source_gender = self._infer_source_gender(path_or_error)
+                return self._adapt_gender_text(content, source_gender, target_gender)
 
-        return error_msg_original
+        return last_error or f"[קובץ פרשנות לא נמצא: {category}/{original_file_name_part}]"
     
     def calc_quarters_michal_green(self):
         # Calculate quarters based on peak/challenge or user logic

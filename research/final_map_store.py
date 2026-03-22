@@ -253,7 +253,7 @@ class FinalMapStore:
         item["map_scope"] = self._scope(target_scope)
         item["layer_key"] = "final"
         item["decision_state"] = "approved"
-        item["source_kind"] = item.get("source_kind") or "promoted"
+        item["source_kind"] = "final_promotion"
         item["source_ref"] = item.get("source_ref") or entry_id
         item["version_key"] = item.get("version_key") or "live"
         return self.upsert_entry(item, scope=item["map_scope"], source_kind=str(item.get("source_kind") or "promoted"))

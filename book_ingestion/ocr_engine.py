@@ -2,14 +2,40 @@
 
 from __future__ import annotations
 
+import csv
 import html
+import json
 import os
 import re
 import shutil
 import sys
 import zipfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, List
+
+try:
+    import docx as python_docx
+    PYTHON_DOCX_AVAILABLE = True
+except ImportError:
+    python_docx = None
+    PYTHON_DOCX_AVAILABLE = False
+
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    pd = None
+    PANDAS_AVAILABLE = False
+
+try:
+    import pythoncom
+    import win32com.client
+    WIN32COM_AVAILABLE = True
+except ImportError:
+    pythoncom = None
+    win32com = None
+    WIN32COM_AVAILABLE = False
 
 try:
     import pytesseract
@@ -66,8 +92,11 @@ except ImportError:
 
 
 class OCREngine:
-    TEXT_EXTENSIONS = {'.txt', '.md', '.csv', '.json', '.yaml', '.yml', '.xml', '.ini', '.cfg', '.log', '.py', '.js', '.ts'}
+    TEXT_EXTENSIONS = {'.txt', '.md', '.yaml', '.yml', '.ini', '.cfg', '.log', '.py', '.js', '.ts'}
+    STRUCTURED_TEXT_EXTENSIONS = {'.json', '.csv', '.tsv', '.xml'}
     HTML_EXTENSIONS = {'.html', '.htm'}
+    WORD_EXTENSIONS = {'.doc', '.docx'}
+    SPREADSHEET_EXTENSIONS = {'.xls', '.xlsx'}
     RTF_EXTENSIONS = {'.rtf'}
     IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp', '.bmp', '.tiff'}
     MIN_TEXT_CHARS = 80
@@ -101,6 +130,9 @@ class OCREngine:
             result['status'] = 'text_extracted'
             result['text'] = text
             return result
+        if extension in self.STRUCTURED_TEXT_EXTENSIONS:
+            result.update(self._extract_structured_text(path))
+            return result
         if extension in self.HTML_EXTENSIONS:
             raw = path.read_text(encoding='utf-8', errors='ignore')
             text = re.sub(r'<[^>]+>', ' ', raw)
@@ -112,8 +144,11 @@ class OCREngine:
             result['status'] = 'text_extracted'
             result['text'] = self._extract_rtf_text(raw)
             return result
-        if extension == '.docx':
-            result.update(self._extract_docx(path))
+        if extension in self.WORD_EXTENSIONS:
+            result.update(self._extract_word(path))
+            return result
+        if extension in self.SPREADSHEET_EXTENSIONS:
+            result.update(self._extract_spreadsheet(path))
             return result
         if extension == '.epub':
             result.update(self._extract_epub(path))
@@ -195,7 +230,110 @@ class OCREngine:
             return which_value
         return None
 
-    def _extract_docx(self, path: Path) -> Dict[str, object]:
+    def _extract_structured_text(self, path: Path) -> Dict[str, object]:
+        extension = path.suffix.lower()
+        if extension == '.json':
+            return self._extract_json_text(path)
+        if extension in {'.csv', '.tsv'}:
+            return self._extract_delimited_text(path)
+        if extension == '.xml':
+            raw = path.read_text(encoding='utf-8', errors='ignore')
+            text = re.sub(r'<[^>]+>', ' ', raw)
+            return {
+                'status': 'text_extracted',
+                'text': html.unescape(re.sub(r'\s+', ' ', text)).strip(),
+                'metadata': {'parser': 'xml-tag-strip'},
+            }
+        return {'status': 'metadata_only', 'text': '', 'metadata': {'parser': 'structured-fallback'}}
+
+    def _extract_json_text(self, path: Path) -> Dict[str, object]:
+        try:
+            payload = json.loads(path.read_text(encoding='utf-8-sig', errors='ignore'))
+        except Exception as exc:
+            return {'status': 'json_error', 'text': '', 'metadata': {'error': str(exc)}}
+
+        lines: List[str] = []
+
+        def _walk(value, prefix: str = '') -> None:
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    child_prefix = f'{prefix}.{key}' if prefix else str(key)
+                    _walk(child, child_prefix)
+                return
+            if isinstance(value, list):
+                for index, child in enumerate(value):
+                    child_prefix = f'{prefix}[{index}]' if prefix else f'[{index}]'
+                    _walk(child, child_prefix)
+                return
+            text = str(value).strip()
+            if text:
+                lines.append(f'{prefix}: {text}' if prefix else text)
+
+        _walk(payload)
+        rendered = '\n'.join(lines).strip()
+        if not rendered:
+            rendered = json.dumps(payload, ensure_ascii=False, indent=2)
+        return {
+            'status': 'text_extracted',
+            'text': rendered,
+            'metadata': {'parser': 'json-flattened', 'top_level_type': type(payload).__name__},
+        }
+
+    def _extract_delimited_text(self, path: Path) -> Dict[str, object]:
+        delimiter = '\t' if path.suffix.lower() == '.tsv' else ','
+        try:
+            rows: List[str] = []
+            with path.open('r', encoding='utf-8-sig', errors='ignore', newline='') as handle:
+                reader = csv.reader(handle, delimiter=delimiter)
+                for index, row in enumerate(reader):
+                    if index > 250:
+                        break
+                    if not row or not any(str(cell).strip() for cell in row):
+                        continue
+                    rows.append(f'row {index + 1}: ' + ' | '.join(str(cell).strip() for cell in row))
+            text = '\n'.join(rows).strip()
+            return {
+                'status': 'text_extracted' if text else 'metadata_only',
+                'text': text,
+                'metadata': {'parser': 'csv-reader', 'delimiter': delimiter},
+            }
+        except Exception as exc:
+            return {'status': 'csv_error', 'text': '', 'metadata': {'error': str(exc)}}
+
+    def _extract_word(self, path: Path) -> Dict[str, object]:
+        extension = path.suffix.lower()
+        if extension == '.docx':
+            if PYTHON_DOCX_AVAILABLE:
+                try:
+                    document = python_docx.Document(str(path))
+                    parts: List[str] = []
+                    for paragraph in document.paragraphs:
+                        text = paragraph.text.strip()
+                        if text:
+                            parts.append(text)
+                    for table_index, table in enumerate(document.tables, start=1):
+                        table_lines: List[str] = []
+                        for row in table.rows:
+                            cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+                            if cells:
+                                table_lines.append(' | '.join(cells))
+                        if table_lines:
+                            parts.append(f'--- Table {table_index} ---')
+                            parts.extend(table_lines)
+                    text = '\n'.join(parts).strip()
+                    return {
+                        'status': 'text_extracted' if text else 'metadata_only',
+                        'text': text,
+                        'metadata': {'parser': 'python-docx'},
+                    }
+                except Exception as exc:
+                    return {'status': 'docx_error', 'text': '', 'metadata': {'error': str(exc)}}
+            return self._extract_docx_zip(path)
+        if extension == '.doc':
+            return self._extract_word_via_com(path)
+        return {'status': 'metadata_only', 'text': '', 'metadata': {'error': f'unsupported word extension: {extension}'}}
+
+    def _extract_docx_zip(self, path: Path) -> Dict[str, object]:
         try:
             with zipfile.ZipFile(path) as archive:
                 xml = archive.read('word/document.xml').decode('utf-8', errors='ignore')
@@ -207,6 +345,265 @@ class OCREngine:
             }
         except Exception as exc:
             return {'status': 'docx_error', 'text': '', 'metadata': {'error': str(exc)}}
+
+    def _extract_word_via_com(self, path: Path) -> Dict[str, object]:
+        if not WIN32COM_AVAILABLE or pythoncom is None or win32com is None:
+            return {'status': 'doc_error', 'text': '', 'metadata': {'error': 'Microsoft Word COM unavailable'}}
+
+        word_app = None
+        document = None
+        try:
+            pythoncom.CoInitialize()
+            word_app = win32com.client.DispatchEx('Word.Application')
+            word_app.Visible = False
+            word_app.DisplayAlerts = 0
+            document = word_app.Documents.Open(str(path), ReadOnly=True, AddToRecentFiles=False, Visible=False)
+            text = str(document.Range().Text or '').strip()
+            text = re.sub(r'\n{3,}', '\n\n', text).strip()
+            return {
+                'status': 'text_extracted' if text else 'metadata_only',
+                'text': text,
+                'metadata': {'parser': 'word-com'},
+            }
+        except Exception as exc:
+            return {'status': 'doc_error', 'text': '', 'metadata': {'error': str(exc), 'parser': 'word-com'}}
+        finally:
+            try:
+                if document is not None:
+                    document.Close(False)
+            except Exception:
+                pass
+            try:
+                if word_app is not None:
+                    word_app.Quit()
+            except Exception:
+                pass
+            try:
+                if pythoncom is not None:
+                    pythoncom.CoUninitialize()
+            except Exception:
+                pass
+
+    def _extract_spreadsheet(self, path: Path) -> Dict[str, object]:
+        extension = path.suffix.lower()
+        if extension in {'.csv', '.tsv'}:
+            return self._extract_delimited_text(path)
+
+        com_result = self._extract_excel_via_com(path)
+        if com_result.get('text'):
+            return com_result
+
+        if extension == '.xlsx':
+            zip_result = self._extract_xlsx_zip(path)
+            if zip_result.get('text'):
+                return zip_result
+
+        pandas_result = self._extract_excel_with_pandas(path)
+        if pandas_result.get('text'):
+            return pandas_result
+
+        if com_result.get('metadata'):
+            return com_result
+        return pandas_result
+
+    def _extract_excel_via_com(self, path: Path) -> Dict[str, object]:
+        if not WIN32COM_AVAILABLE or pythoncom is None or win32com is None:
+            return {'status': 'excel_error', 'text': '', 'metadata': {'error': 'Microsoft Excel COM unavailable'}}
+
+        excel_app = None
+        workbook = None
+        try:
+            pythoncom.CoInitialize()
+            excel_app = win32com.client.DispatchEx('Excel.Application')
+            excel_app.Visible = False
+            excel_app.DisplayAlerts = False
+            workbook = excel_app.Workbooks.Open(str(path), ReadOnly=True)
+            snippets: List[str] = []
+            for sheet in workbook.Worksheets:
+                snippets.append(f'--- Sheet: {sheet.Name} ---')
+                used_range = sheet.UsedRange
+                rows = min(int(used_range.Rows.Count or 0), 250)
+                cols = min(int(used_range.Columns.Count or 0), 40)
+                for row_index in range(1, rows + 1):
+                    values: List[str] = []
+                    for col_index in range(1, cols + 1):
+                        try:
+                            cell_value = used_range.Cells(row_index, col_index).Value
+                        except Exception:
+                            cell_value = None
+                        values.append('' if cell_value is None else str(cell_value).strip())
+                    line = ' | '.join(values).strip()
+                    if line:
+                        snippets.append(line)
+            text = '\n'.join(snippets).strip()
+            return {
+                'status': 'text_extracted' if text else 'metadata_only',
+                'text': text,
+                'metadata': {'parser': 'excel-com'},
+            }
+        except Exception as exc:
+            return {'status': 'excel_error', 'text': '', 'metadata': {'error': str(exc), 'parser': 'excel-com'}}
+        finally:
+            try:
+                if workbook is not None:
+                    workbook.Close(False)
+            except Exception:
+                pass
+            try:
+                if excel_app is not None:
+                    excel_app.Quit()
+            except Exception:
+                pass
+            try:
+                if pythoncom is not None:
+                    pythoncom.CoUninitialize()
+            except Exception:
+                pass
+
+    def _extract_excel_with_pandas(self, path: Path) -> Dict[str, object]:
+        if not PANDAS_AVAILABLE:
+            return {'status': 'excel_error', 'text': '', 'metadata': {'error': 'pandas unavailable'}}
+        try:
+            sheets = pd.read_excel(str(path), sheet_name=None)  # type: ignore[union-attr]
+            snippets: List[str] = []
+            for sheet_name, frame in (sheets or {}).items():
+                snippets.append(f'--- Sheet: {sheet_name} ---')
+                if frame is None or frame.empty:
+                    continue
+                header = [str(col) for col in frame.columns.tolist()]
+                if header:
+                    snippets.append(' | '.join(header))
+                for _, row in frame.head(200).iterrows():
+                    snippets.append(' | '.join('' if cell is None else str(cell).strip() for cell in row.tolist()))
+            text = '\n'.join(snippets).strip()
+            return {
+                'status': 'text_extracted' if text else 'metadata_only',
+                'text': text,
+                'metadata': {'parser': 'pandas-excel'},
+            }
+        except Exception as exc:
+            return {'status': 'excel_error', 'text': '', 'metadata': {'error': str(exc), 'parser': 'pandas-excel'}}
+
+    def _extract_xlsx_zip(self, path: Path) -> Dict[str, object]:
+        try:
+            with zipfile.ZipFile(path) as archive:
+                shared_strings = self._read_xlsx_shared_strings(archive)
+                sheet_map = self._read_xlsx_sheet_map(archive)
+                if not sheet_map:
+                    return {'status': 'excel_error', 'text': '', 'metadata': {'error': 'workbook sheets missing'}}
+
+                snippets: List[str] = []
+                for sheet_name, sheet_path in sheet_map.items():
+                    if not sheet_path:
+                        continue
+                    try:
+                        raw = archive.read(sheet_path)
+                    except Exception:
+                        continue
+                    sheet_text = self._parse_xlsx_sheet(raw, shared_strings)
+                    if sheet_text.strip():
+                        snippets.append(f'--- Sheet: {sheet_name} ---')
+                        snippets.append(sheet_text)
+                text = '\n'.join(snippets).strip()
+                return {
+                    'status': 'text_extracted' if text else 'metadata_only',
+                    'text': text,
+                    'metadata': {'parser': 'xlsx-zip'},
+                }
+        except Exception as exc:
+            return {'status': 'excel_error', 'text': '', 'metadata': {'error': str(exc), 'parser': 'xlsx-zip'}}
+
+    def _read_xlsx_shared_strings(self, archive: zipfile.ZipFile) -> List[str]:
+        try:
+            data = archive.read('xl/sharedStrings.xml')
+        except Exception:
+            return []
+        try:
+            root = ET.fromstring(data)
+        except Exception:
+            return []
+        ns = {'a': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+        strings: List[str] = []
+        for si in root.findall('a:si', ns):
+            parts = [node.text or '' for node in si.findall('.//a:t', ns)]
+            strings.append(''.join(parts))
+        return strings
+
+    def _read_xlsx_sheet_map(self, archive: zipfile.ZipFile) -> Dict[str, str]:
+        try:
+            workbook_xml = ET.fromstring(archive.read('xl/workbook.xml'))
+        except Exception:
+            return {}
+        try:
+            rels_xml = ET.fromstring(archive.read('xl/_rels/workbook.xml.rels'))
+        except Exception:
+            rels_xml = None
+        workbook_ns = {
+            'a': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
+            'r': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
+        }
+        rels_map: Dict[str, str] = {}
+        if rels_xml is not None:
+            for rel in rels_xml:
+                rel_id = rel.attrib.get('Id')
+                rel_target = rel.attrib.get('Target', '')
+                if rel_id and rel_target:
+                    rels_map[rel_id] = rel_target.lstrip('/')
+        sheet_map: Dict[str, str] = {}
+        for sheet in workbook_xml.findall('a:sheets/a:sheet', workbook_ns):
+            name = sheet.attrib.get('name', 'Sheet')
+            rel_id = sheet.attrib.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id', '')
+            target = rels_map.get(rel_id, '')
+            if target and not target.startswith('xl/'):
+                target = f'xl/{target}'
+            sheet_map[name] = target
+        return sheet_map
+
+    def _parse_xlsx_sheet(self, raw_xml: bytes, shared_strings: List[str]) -> str:
+        try:
+            root = ET.fromstring(raw_xml)
+        except Exception:
+            return ''
+        ns = {'a': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+        rows: List[str] = []
+        for row in root.findall('.//a:sheetData/a:row', ns):
+            cells: Dict[int, str] = {}
+            max_index = 0
+            for cell in row.findall('a:c', ns):
+                ref = cell.attrib.get('r', '')
+                col_index = self._xlsx_column_index(ref)
+                if col_index <= 0:
+                    continue
+                max_index = max(max_index, col_index)
+                cell_type = cell.attrib.get('t', '')
+                value = ''
+                if cell_type == 's':
+                    shared_index = cell.findtext('a:v', default='', namespaces=ns)
+                    if shared_index.isdigit():
+                        idx = int(shared_index)
+                        if 0 <= idx < len(shared_strings):
+                            value = shared_strings[idx]
+                elif cell_type == 'inlineStr':
+                    value = ''.join(node.text or '' for node in cell.findall('.//a:t', ns))
+                else:
+                    value = cell.findtext('a:v', default='', namespaces=ns)
+                cells[col_index] = re.sub(r'\s+', ' ', str(value or '').strip())
+            if max_index == 0:
+                continue
+            ordered = [cells.get(index, '') for index in range(1, max_index + 1)]
+            line = ' | '.join(ordered).strip()
+            if line:
+                rows.append(line)
+        return '\n'.join(rows)
+
+    def _xlsx_column_index(self, cell_ref: str) -> int:
+        letters = ''.join(ch for ch in str(cell_ref or '') if ch.isalpha()).upper()
+        if not letters:
+            return 0
+        value = 0
+        for char in letters:
+            value = value * 26 + (ord(char) - 64)
+        return value
 
     def _extract_epub(self, path: Path) -> Dict[str, object]:
         try:

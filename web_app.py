@@ -54,6 +54,10 @@ def _set_rtl_paragraph(paragraph):
     paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     paragraph.paragraph_format.rtl = True
 
+
+def _export_interpretation(calc, category, number, gender_key, **kwargs):
+    return calc.render_interpretation(category, number, gender_key, **kwargs)
+
 def generate_docx_bytes(calc, gender_key, ai_report_text=None):
     """Generates the Word document in memory and returns a BytesIO object."""
     document = Document()
@@ -85,7 +89,7 @@ def generate_docx_bytes(calc, gender_key, ai_report_text=None):
         _set_rtl_paragraph(h)
         p = document.add_paragraph(f"המספר המחושב: {calc.final_number_destiny}")
         _set_rtl_paragraph(p)
-        interpretation = calc.get_interpretation("destiny", calc.final_number_destiny, gender_key)
+        interpretation = _export_interpretation(calc, "destiny", calc.final_number_destiny, gender_key)
         p = document.add_paragraph(interpretation)
         _set_rtl_paragraph(p)
         document.add_paragraph()
@@ -96,7 +100,7 @@ def generate_docx_bytes(calc, gender_key, ai_report_text=None):
         _set_rtl_paragraph(h)
         p = document.add_paragraph(f"השנה האישית שלך: {calc.shana_ishit}")
         _set_rtl_paragraph(p)
-        interpretation = calc.get_interpretation("personal_year", calc.shana_ishit, gender_key)
+        interpretation = _export_interpretation(calc, "personal_year", calc.shana_ishit, gender_key)
         p = document.add_paragraph(interpretation)
         _set_rtl_paragraph(p)
         document.add_paragraph()
@@ -107,7 +111,7 @@ def generate_docx_bytes(calc, gender_key, ai_report_text=None):
         _set_rtl_paragraph(h)
         p = document.add_paragraph(f"יום הלידה המצומצם: {calc.p_day}")
         _set_rtl_paragraph(p)
-        interpretation = calc.get_interpretation("birth_day", calc.p_day, gender_key)
+        interpretation = _export_interpretation(calc, "birth_day", calc.p_day, gender_key)
         p = document.add_paragraph(interpretation)
         _set_rtl_paragraph(p)
         document.add_paragraph()
@@ -129,13 +133,13 @@ def generate_docx_bytes(calc, gender_key, ai_report_text=None):
         
         p = document.add_paragraph(f"פסגה: {peak}")
         _set_rtl_paragraph(p)
-        interp_peak = calc.get_interpretation("peaks_interpretation", peak, gender_key)
+        interp_peak = _export_interpretation(calc, "peaks_interpretation", peak, gender_key)
         p = document.add_paragraph(interp_peak)
         _set_rtl_paragraph(p)
         
         p = document.add_paragraph(f"אתגר: {challenge}")
         _set_rtl_paragraph(p)
-        interp_challenge = calc.get_interpretation("challenges_interpretation", challenge, gender_key)
+        interp_challenge = _export_interpretation(calc, "challenges_interpretation", challenge, gender_key)
         p = document.add_paragraph(interp_challenge)
         _set_rtl_paragraph(p)
         

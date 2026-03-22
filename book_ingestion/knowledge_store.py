@@ -376,6 +376,53 @@ class KnowledgeStore:
             rows = conn.execute(query, tuple(params)).fetchall()
         return [dict(row) for row in rows]
 
+    def prune_learning_log(self, corpus: str | None = None, keep_last: int = 20) -> int:
+        keep_last = max(0, int(keep_last or 0))
+        with self._connect() as conn:
+            if corpus:
+                ids = [
+                    row["id"]
+                    for row in conn.execute(
+                        """
+                        SELECT id
+                        FROM book_learning_log
+                        WHERE corpus = ?
+                        ORDER BY created_at DESC, id DESC
+                        LIMIT ?
+                        """,
+                        (corpus, keep_last),
+                    ).fetchall()
+                ]
+                if not ids:
+                    return 0
+                placeholders = ",".join("?" for _ in ids)
+                result = conn.execute(
+                    f"DELETE FROM book_learning_log WHERE corpus = ? AND id NOT IN ({placeholders})",
+                    (corpus, *ids),
+                )
+            else:
+                ids = [
+                    row["id"]
+                    for row in conn.execute(
+                        """
+                        SELECT id
+                        FROM book_learning_log
+                        ORDER BY created_at DESC, id DESC
+                        LIMIT ?
+                        """,
+                        (keep_last,),
+                    ).fetchall()
+                ]
+                if not ids:
+                    return 0
+                placeholders = ",".join("?" for _ in ids)
+                result = conn.execute(
+                    f"DELETE FROM book_learning_log WHERE id NOT IN ({placeholders})",
+                    tuple(ids),
+                )
+            conn.commit()
+            return int(result.rowcount or 0)
+
     def search_memory(self, query: str, corpus: str | None = None, limit: int = 20) -> List[Dict[str, object]]:
         terms = [part.strip() for part in str(query or '').split() if part.strip()]
         if not terms:
@@ -383,12 +430,28 @@ class KnowledgeStore:
         clauses = []
         params: List[object] = []
         for term in terms:
-            pattern = f"%{term}%"
-            clauses.append("(b.title LIKE ? OR b.excerpt LIKE ? OR b.metadata_json LIKE ? OR c.content LIKE ? OR a.content_text LIKE ? OR r.interpretation_rules LIKE ?)")
-            params.extend([pattern, pattern, pattern, pattern, pattern, pattern])
+            pattern = f"%{term.lower()}%"
+            clauses.append(
+                "("
+                "LOWER(b.title) LIKE ? OR "
+                "LOWER(b.excerpt) LIKE ? OR "
+                "LOWER(b.metadata_json) LIKE ? OR "
+                "LOWER(b.source_path) LIKE ? OR "
+                "LOWER(b.corpus) LIKE ? OR "
+                "LOWER(c.content) LIKE ? OR "
+                "LOWER(a.content_text) LIKE ? OR "
+                "LOWER(a.content_json) LIKE ? OR "
+                "LOWER(r.interpretation_rules) LIKE ? OR "
+                "LOWER(r.concept_label) LIKE ? OR "
+                "LOWER(r.concept_key) LIKE ?"
+                ")"
+            )
+            params.extend([pattern] * 11)
         query_sql = """
-            SELECT b.corpus, b.title, b.source_path, b.status, b.text_length, b.excerpt,
+            SELECT b.corpus, b.title, b.source_path, b.status, b.text_length, b.excerpt, b.updated_at,
+                   b.metadata_json,
                    c.content AS chunk_text,
+                   c.chunk_index,
                    a.artifact_type, a.content_text AS artifact_text, a.content_json AS artifact_json,
                    r.concept_key, r.concept_label, r.interpretation_rules, r.confidence
             FROM books b
@@ -396,15 +459,64 @@ class KnowledgeStore:
             LEFT JOIN book_artifacts a ON a.book_id = b.id
             LEFT JOIN book_rules r ON r.corpus = b.corpus
         """
-        query_sql += " WHERE " + " AND ".join(clauses)
+        query_sql += " WHERE (" + " OR ".join(clauses) + ")"
         if corpus:
             query_sql += " AND b.corpus = ?"
             params.append(corpus)
-        query_sql += " ORDER BY b.updated_at DESC, b.title ASC LIMIT ?"
-        params.append(limit)
+        query_sql += " ORDER BY b.updated_at DESC, b.title ASC, COALESCE(c.chunk_index, 0) ASC LIMIT ?"
+        params.append(max(limit * 8, limit))
         with self._connect() as conn:
             rows = conn.execute(query_sql, tuple(params)).fetchall()
-        return [dict(row) for row in rows]
+        deduped: List[Dict[str, object]] = []
+        seen: set[str] = set()
+        for row in rows:
+            item = dict(row)
+            key = "|".join([
+                str(item.get("corpus") or ""),
+                str(item.get("title") or ""),
+                str(item.get("source_path") or ""),
+                str(item.get("concept_key") or ""),
+                str(item.get("artifact_type") or ""),
+                str(item.get("chunk_index") or ""),
+                str(item.get("chunk_text") or "")[:120],
+            ])
+            if key in seen:
+                continue
+            seen.add(key)
+            haystack = " ".join([
+                str(item.get("corpus") or ""),
+                str(item.get("title") or ""),
+                str(item.get("source_path") or ""),
+                str(item.get("status") or ""),
+                str(item.get("excerpt") or ""),
+                str(item.get("chunk_text") or ""),
+                str(item.get("artifact_text") or ""),
+                str(item.get("artifact_json") or ""),
+                str(item.get("interpretation_rules") or ""),
+                str(item.get("concept_label") or ""),
+                str(item.get("concept_key") or ""),
+                str(item.get("metadata_json") or ""),
+            ]).lower()
+            score = 0
+            for term in terms:
+                term_lower = term.lower()
+                if term_lower in str(item.get("title") or "").lower():
+                    score += 6
+                if term_lower in str(item.get("source_path") or "").lower():
+                    score += 4
+                if term_lower in str(item.get("corpus") or "").lower():
+                    score += 3
+                if term_lower in haystack:
+                    score += 1
+            item["_score"] = score + min(4.0, (int(item.get("text_length") or 0) / 5000.0))
+            deduped.append(item)
+        deduped.sort(key=lambda row: (
+            -float(row.pop("_score", 0) or 0),
+            -int(row.get("text_length") or 0),
+            str(row.get("title") or "").lower(),
+            str(row.get("source_path") or "").lower(),
+        ))
+        return deduped[:limit]
 
 
 

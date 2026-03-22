@@ -1,13 +1,13 @@
 # Spirit Category Map
 
 ## Summary
-- שפע, השפעה ובריאה: 16 קבצים
-- ריפוי ואנרגיה: 8 קבצים
-- תודעה והתעוררות: 7 קבצים
-- אינטואיציה ויכולות תפיסה: 7 קבצים
-- אסטרל, חלימה ויציאה מהגוף: 5 קבצים
-- תקשור ומדריכים רוחניים: 3 קבצים
-- מדיטציה ונוכחות: 2 קבצים
+- שפע, השפעה ובריאה: 12 קבצים
+- תודעה והתעוררות: 5 קבצים
+- ריפוי ואנרגיה: 5 קבצים
+- אינטואיציה ויכולות תפיסה: 5 קבצים
+- אסטרל, חלימה ויציאה מהגוף: 4 קבצים
+- תקשור ומדריכים רוחניים: 2 קבצים
+- מדיטציה ונוכחות: 1 קבצים
 
 ## Books
 
@@ -25,11 +25,6 @@
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Anthony-Robbins-Unlimited-Power-Home-Study-Course.pdf
 - סטטוס: text_extracted
 - קטגוריות: שפע, השפעה ובריאה (0.56)
-
-### Ask and It Is Given - Abraham Hicks ( PDFDrive )
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Ask and It Is Given - Abraham Hicks ( PDFDrive ).pdf
-- סטטוס: ocr_pending
-- קטגוריות: תקשור ומדריכים רוחניים (0.56), שפע, השפעה ובריאה (0.56)
 
 ### autobiography-of-a-yogi
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\חדשים מומלצים\autobiography-of-a-yogi.pdf
@@ -70,6 +65,11 @@
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Doorways_to_Light.pdf
 - סטטוס: text_extracted
 - קטגוריות: ריפוי ואנרגיה (0.56), אסטרל, חלימה ויציאה מהגוף (0.46)
+
+### download_books
+- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\download_books.py
+- סטטוס: text_extracted
+- קטגוריות: לא סווג
 
 ### Dr. Joe
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Dr. Joe.html
@@ -136,21 +136,6 @@
 - סטטוס: text_extracted
 - קטגוריות: אינטואיציה ויכולות תפיסה (0.68)
 
-### Robert Anton Wilson - Quantum Psychology
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Robert Anton Wilson - Quantum Psychology.pdf
-- סטטוס: ocr_pending
-- קטגוריות: אסטרל, חלימה ויציאה מהגוף (0.56)
-
-### Social Engineering - the Art of Human Hacking
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Social Engineering - the Art of Human Hacking.pdf
-- סטטוס: text_extracted
-- קטגוריות: לא סווג
-
-### SP_II_Transform_Yourself_for_Success_2012-06-04
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\SP_II_Transform_Yourself_for_Success_2012-06-04.pdf
-- סטטוס: text_extracted
-- קטגוריות: שפע, השפעה ובריאה (0.68)
-
 ### Tao te Ching - Lao Tzu
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Tao te Ching - Lao Tzu.pdf
 - סטטוס: text_extracted
@@ -161,20 +146,10 @@
 - סטטוס: text_extracted
 - קטגוריות: ריפוי ואנרגיה (0.68)
 
-### The Pineal Gland & Third Eye
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\The Pineal Gland & Third Eye.pdf
-- סטטוס: ocr_pending
-- קטגוריות: אינטואיציה ויכולות תפיסה (0.78)
-
 ### The Power of Intuition_ How to Use Your Gut Feelings to Make Better Decisions at Work ( PDFDrive )
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\The Power of Intuition_ How to Use Your Gut Feelings to Make Better Decisions at Work ( PDFDrive ).pdf
 - סטטוס: text_extracted
 - קטגוריות: אינטואיציה ויכולות תפיסה (0.68), שפע, השפעה ובריאה (0.56)
-
-### The Power of Now- A Guide to Spiritual Enlightenment ( PDFDrive )
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\The Power of Now- A Guide to Spiritual Enlightenment ( PDFDrive ).pdf
-- סטטוס: ocr_pending
-- קטגוריות: תודעה והתעוררות (0.78), ריפוי ואנרגיה (0.56), שפע, השפעה ובריאה (0.56)
 
 ### The Silva Mind Control Method ( PDFDrive )
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\The Silva Mind Control Method ( PDFDrive ).pdf
@@ -196,11 +171,6 @@
 - סטטוס: text_extracted
 - קטגוריות: שפע, השפעה ובריאה (0.46)
 
-### the-science-of-oneness
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\the-science-of-oneness.pdf
-- סטטוס: text_extracted
-- קטגוריות: לא סווג
-
 ### The-Success-Principles-Jack_Canfield_Janet_Switzer
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\The-Success-Principles-Jack_Canfield_Janet_Switzer.pdf
 - סטטוס: text_extracted
@@ -221,11 +191,6 @@
 - סטטוס: text_extracted
 - קטגוריות: לא סווג
 
-### Tony_Robbins_Winning_at_the_Game_of_Life_Audio_Only__CBR_192k
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Tony_Robbins_Winning_at_the_Game_of_Life_Audio_Only__CBR_192k.mp3
-- סטטוס: metadata_only
-- קטגוריות: לא סווג
-
 ### UFOlogy
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\UFOlogy.html
 - סטטוס: text_extracted
@@ -235,21 +200,6 @@
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Unknown_Travel_In_Spiritual_Worlds.pdf
 - סטטוס: text_extracted
 - קטגוריות: תודעה והתעוררות (0.56), אסטרל, חלימה ויציאה מהגוף (0.46)
-
-### Unleash Your Psychic Powers ( PDFDrive )
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Unleash Your Psychic Powers ( PDFDrive ).epub
-- סטטוס: text_extracted
-- קטגוריות: אינטואיציה ויכולות תפיסה (0.68), שפע, השפעה ובריאה (0.56), תודעה והתעוררות (0.46)
-
-### What is Lightbody
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\What is Lightbody.pdf
-- סטטוס: text_extracted
-- קטגוריות: ריפוי ואנרגיה (0.78), מדיטציה ונוכחות (0.46)
-
-### Where There Is No Doctor 2010
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Where There Is No Doctor 2010.pdf
-- סטטוס: text_extracted
-- קטגוריות: ריפוי ואנרגיה (0.46)
 
 ### Wiki Books - Lucid Dreaming
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Wiki Books - Lucid Dreaming.pdf
@@ -298,10 +248,5 @@
 
 ### ריפוי
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\ריפוי.html
-- סטטוס: text_extracted
-- קטגוריות: לא סווג
-
-### שחזור גלגולים_20250607_141601_0000
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\חדשים מומלצים\שחזור גלגולים_20250607_141601_0000.pdf
 - סטטוס: text_extracted
 - קטגוריות: לא סווג

@@ -54,11 +54,18 @@ class BookProcessor:
         folder = Path(folder_path)
         results = []
         valid_sources: List[str] = []
-        self.store.set_learning_status(corpus, 'running', progress=f'Indexing {folder.name}')
+        if folder.is_file():
+            source_paths = [folder]
+        else:
+            source_paths = [path for path in sorted(folder.rglob('*')) if path.is_file() and not self._should_skip(path)]
+        total = len(source_paths)
+        self.store.set_learning_status(
+            corpus,
+            'running',
+            progress=f'0%|Indexing {folder.name} (0/{total or 1})',
+        )
         encountered_error = False
-        for path in sorted(folder.rglob('*')):
-            if not path.is_file() or self._should_skip(path):
-                continue
+        for index, path in enumerate(source_paths, start=1):
             try:
                 result = self.add_book(
                     title=path.stem,
@@ -69,6 +76,12 @@ class BookProcessor:
                 )
                 valid_sources.append(str(path))
                 results.append(result)
+                pct = int((index / max(total, 1)) * 100)
+                self.store.set_learning_status(
+                    corpus,
+                    'running',
+                    progress=f'{pct}%|Indexing {index}/{max(total, 1)}: {path.name}',
+                )
             except Exception as exc:
                 encountered_error = True
                 results.append({
@@ -76,12 +89,23 @@ class BookProcessor:
                     'source_path': str(path),
                     'title': path.stem,
                 })
+                pct = int((index / max(total, 1)) * 100)
+                self.store.set_learning_status(
+                    corpus,
+                    'running',
+                    progress=f'{pct}%|Indexing {index}/{max(total, 1)}: {path.name} failed',
+                )
         self.store.sync_corpus_sources(corpus, valid_sources)
         self.store.purge_generated_records(corpus)
         if encountered_error:
-            self.store.set_learning_status(corpus, 'error', error='One or more files failed during indexing')
+            self.store.set_learning_status(
+                corpus,
+                'error',
+                error='One or more files failed during indexing',
+                progress=f'100%|Indexed {len(valid_sources)} files with errors',
+            )
         else:
-            self.store.set_learning_status(corpus, 'done', progress=f'Indexed {len(valid_sources)} files')
+            self.store.set_learning_status(corpus, 'done', progress=f'100%|Indexed {len(valid_sources)} files')
         return results
 
     def export_markdown_catalog(self, corpus: str, output_path: str) -> str:

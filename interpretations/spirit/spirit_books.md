@@ -1,6 +1,6 @@
 # Spirit Catalog
 
-סה"כ ספרים/קבצים: 59
+סה"כ ספרים/קבצים: 48
 
 ## 365 Ways to Develop Your Psychic Ability_ Simple Tools to Increase Your Intuition _ Clairvoyance ( PDFDrive )
 - סטטוס: text_extracted
@@ -25,13 +25,6 @@
 - אורך טקסט: 47868
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Anthony-Robbins-Unlimited-Power-Home-Study-Course.pdf
 - excerpt: --- Page 1 --- UNLIMITED POWER  BY ANTHONY ROBBINS      Copyright © 1991 by Robbins Research Inte rnational. AM rights reserved. Reproduction in  any form without the express written co nvent of Robbins Research In terna
-
-## Ask and It Is Given - Abraham Hicks ( PDFDrive )
-- סטטוס: ocr_pending
-- סוג קובץ: .pdf
-- שפה משוערת: EN
-- אורך טקסט: 0
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Ask and It Is Given - Abraham Hicks ( PDFDrive ).pdf
 
 ## autobiography-of-a-yogi
 - סטטוס: text_extracted
@@ -96,6 +89,14 @@
 - אורך טקסט: 50914
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Doorways_to_Light.pdf
 - excerpt: --- Page 1 --- DOORWAYS TO LIGHT GURUJI KRISHNANANDA --- Page 2 --- "We must know about certain truths." "There was a life before this. There will  be a life after this. We do not die with the  physical body. We survive 
+
+## download_books
+- סטטוס: text_extracted
+- סוג קובץ: .py
+- שפה משוערת: EN
+- אורך טקסט: 3593
+- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\download_books.py
+- excerpt: """ הורדת ספרים למערכת הסוכנים תיקיית יעד: C:/Users/fishman-ai-server/Desktop/ai_agents/books/ הרץ: python download_books.py """  import os import time import urllib.request  SAVE_DIR = r"C:\Users\fishman-ai-server\Deskt
 
 ## Dr. Joe
 - סטטוס: text_extracted
@@ -199,29 +200,6 @@
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Remote Viewing.html
 - excerpt: Shortcut Remote Viewing Remote Viewing
 
-## Robert Anton Wilson - Quantum Psychology
-- סטטוס: ocr_pending
-- סוג קובץ: .pdf
-- שפה משוערת: EN
-- אורך טקסט: 0
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Robert Anton Wilson - Quantum Psychology.pdf
-
-## Social Engineering - the Art of Human Hacking
-- סטטוס: text_extracted
-- סוג קובץ: .pdf
-- שפה משוערת: EN
-- אורך טקסט: 60262
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Social Engineering - the Art of Human Hacking.pdf
-- excerpt: --- Page 2 --- Table of Contents Cover Title Page Copyright Dedication About the Author About the Technical Editor Credits Foreword Preface and Acknowledgments Chapter 1: A Look into the World of Social Engineering Why T
-
-## SP_II_Transform_Yourself_for_Success_2012-06-04
-- סטטוס: text_extracted
-- סוג קובץ: .pdf
-- שפה משוערת: EN
-- אורך טקסט: 21259
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\SP_II_Transform_Yourself_for_Success_2012-06-04.pdf
-- excerpt: --- Page 1 --- How to get from where you are to where you  want to be     With reference to the book   The Success Principles – How to get from where you are to where you want to be   [2005] Jack Canfield and Janet Switz
-
 ## Tao te Ching - Lao Tzu
 - סטטוס: text_extracted
 - סוג קובץ: .pdf
@@ -238,13 +216,6 @@
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\The Language of Energy (E-book).pdf
 - excerpt: --- Page 1 --- The Language  of Energy Accessing, Understanding, and Applying   the Universal Language That Connects   All Beings and All Things  JASON SHURKA --- Page 2 --- THE LANGUAGE OF ENERGY: ACCESSING, UNDERSTANDI
 
-## The Pineal Gland & Third Eye
-- סטטוס: ocr_pending
-- סוג קובץ: .pdf
-- שפה משוערת: EN
-- אורך טקסט: 0
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\The Pineal Gland & Third Eye.pdf
-
 ## The Power of Intuition_ How to Use Your Gut Feelings to Make Better Decisions at Work ( PDFDrive )
 - סטטוס: text_extracted
 - סוג קובץ: .pdf
@@ -252,13 +223,6 @@
 - אורך טקסט: 63949
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\The Power of Intuition_ How to Use Your Gut Feelings to Make Better Decisions at Work ( PDFDrive ).pdf
 - excerpt: --- Page 3 --- Table	of	Contents Title	Page Dedication Acknowledgments Preface Section	I	-	INTUITION	Ways	to	Build	It 1	-	A	Pragmatic	Approach	to	Intuitive	Decision	Making Intuition—We	Can’t	Trust	It	but	We	Can’t	Live	Wi
-
-## The Power of Now- A Guide to Spiritual Enlightenment ( PDFDrive )
-- סטטוס: ocr_pending
-- סוג קובץ: .pdf
-- שפה משוערת: EN
-- אורך טקסט: 0
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\The Power of Now- A Guide to Spiritual Enlightenment ( PDFDrive ).pdf
 
 ## The Silva Mind Control Method ( PDFDrive )
 - סטטוס: text_extracted
@@ -292,14 +256,6 @@
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\The-New-Psycho-Cybernetics-by-Maxwell-Maltz-shaanta.pdf
 - excerpt: --- Page 1 --- THENBW  PSYCH I-CYBERNETICS ·  The Original Science of Self-Improvement  and Success that Has Changed the  Lives of 30 Million People  MAXWELL MALTZ, M.D., F.1.C.S.  FDlTED AND UPDATED BY DAN S. KFNNEDY AN
 
-## the-science-of-oneness
-- סטטוס: text_extracted
-- סוג קובץ: .pdf
-- שפה משוערת: EN
-- אורך טקסט: 127036
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\the-science-of-oneness.pdf
-- excerpt: --- Page 3 --- PROLOGUE: IS CURRENT SCIENCE INCOMPLETE?PROLOGUE: IS CURRENT SCIENCE INCOMPLETE?What if everything you thought you knew about science, and its connection to spirituality, was wrong?What if you woke up one 
-
 ## The-Success-Principles-Jack_Canfield_Janet_Switzer
 - סטטוס: text_extracted
 - סוג קובץ: .pdf
@@ -332,13 +288,6 @@
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Thoughts-Create-Emotions.pdf
 - excerpt: --- Page 1 --- Thoughts Create Emotions       Should emotions be trusted?     COMMON BELIEF: You should always trust your emotions.     COMMON BELIEF: Feelings are irrational and can’t be trusted.     So which is it? The
 
-## Tony_Robbins_Winning_at_the_Game_of_Life_Audio_Only__CBR_192k
-- סטטוס: metadata_only
-- סוג קובץ: .mp3
-- שפה משוערת: EN
-- אורך טקסט: 0
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Tony_Robbins_Winning_at_the_Game_of_Life_Audio_Only__CBR_192k.mp3
-
 ## UFOlogy
 - סטטוס: text_extracted
 - סוג קובץ: .html
@@ -354,30 +303,6 @@
 - אורך טקסט: 121716
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Unknown_Travel_In_Spiritual_Worlds.pdf
 - excerpt: --- Page 1 --- In the name of Allah          A complete guide on Astral Travels.     Gathered, Edited and Converted into PDF version by Right.  Source: Spiritu alTravel.org --- Page 2 --- Table of Contents:  Introduction
-
-## Unleash Your Psychic Powers ( PDFDrive )
-- סטטוס: text_extracted
-- סוג קובץ: .epub
-- שפה משוערת: EN
-- אורך טקסט: 908462
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Unleash Your Psychic Powers ( PDFDrive ).epub
-- excerpt: Unleash Your Psychic Powers-Kindle Unleash Your Psychic Powers Embrosewyn Tazkuvel OTHER BOOKS BY EMBROSEWYN TAZKUVEL: AURAS How To See, Feel And Know PSYCHIC SELF DEFENSE LOVE YOURSELF The Secret Key to Transforming You
-
-## What is Lightbody
-- סטטוס: text_extracted
-- סוג קובץ: .pdf
-- שפה משוערת: EN
-- אורך טקסט: 124291
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\What is Lightbody.pdf
-- excerpt: --- Page 2 --- ..:: ~~ ~:: -...;......•Q"'1j:::CO .... ~cOJ c .,0 ... r-~ G) :tnpC:::c-.•• --i -. --i :: •.•. ot.rl m~Z :l; ;::t.rlmZ•..~ ~ ~Q ;:: ••~...Q I: ••;3 ~••••.... --- Page 3 --- ~Dedication ~ Tothelightworkers 
-
-## Where There Is No Doctor 2010
-- סטטוס: text_extracted
-- סוג קובץ: .pdf
-- שפה משוערת: EN
-- אורך טקסט: 79873
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\Where There Is No Doctor 2010.pdf
-- excerpt: --- Page 1 --- Where There Is No Doctor 2010 --- Page 2 --- Where There Is No Doctor 2010 Library of Congress Cataloging-in-Publication Data The Library of Congress has already cataloged the 10-digit ISBN as follows: Wer
 
 ## Wiki Books - Lucid Dreaming
 - סטטוס: text_extracted
@@ -458,11 +383,3 @@
 - אורך טקסט: 22
 - נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\ריפוי.html
 - excerpt: Shortcut ריפוי ריפוי
-
-## שחזור גלגולים_20250607_141601_0000
-- סטטוס: text_extracted
-- סוג קובץ: .pdf
-- שפה משוערת: HE
-- אורך טקסט: 24632
-- נתיב: C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\spirit\חדשים מומלצים\שחזור גלגולים_20250607_141601_0000.pdf
-- excerpt: --- Page 1 --- גלגולים שחזור  של  אישי  מסע  הלב דרך -  נשמתי  אסתר ענבר  שער הנשמה --- Page 2 --- .היית כבר  –  שהיית  לפני"  .בו רקד כבר  ממך  ניצוץ  –  נברא  הראשון  כשהאור .והאמונה הנס  שבין  הרעד  את  זכר  בך  חלק  

@@ -64,5 +64,82 @@
     "enabled_for_customers": false,
     "added_at": 1773944198.0152361,
     "notes": ""
+  },
+  "נומרולוגיה_בתיווך_האסטרולוגיה": {
+    "key": "נומרולוגיה_בתיווך_האסטרולוגיה",
+    "folder": "נומרולוגיה בתיווך האסטרולוגיה",
+    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\נומרולוגיה בתיווך האסטרולוגיה",
+    "display_name": "נומרולוגיה בתיווך האסטרולוגיה",
+    "adapter": "generic",
+    "enabled_for_research": true,
+    "enabled_for_customers": false,
+    "added_at": 1774097450.4260108,
+    "notes": ""
+  },
+  "more_books": {
+    "key": "more_books",
+    "folder": "more_books",
+    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\more_books",
+    "display_name": "more_books",
+    "adapter": "generic",
+    "enabled_for_research": true,
+    "enabled_for_customers": false,
+    "added_at": 1774097930.787822,
+    "notes": ""
+  },
+  "לי_ברגמן_שרה_ברק_אלי_מורג_נומרולוגיה": {
+    "key": "לי_ברגמן_שרה_ברק_אלי_מורג_נומרולוגיה",
+    "folder": "לי ברגמן שרה ברק אלי מורג נומרולוגיה",
+    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\לי ברגמן שרה ברק אלי מורג נומרולוגיה",
+    "display_name": "לי ברגמן שרה ברק אלי מורג נומרולוגיה",
+    "adapter": "generic",
+    "enabled_for_research": true,
+    "enabled_for_customers": false,
+    "added_at": 1774097614.1832404,
+    "notes": ""
+  },
+  "נומרולוגיה_לילי_רוזנפלד": {
+    "key": "נומרולוגיה_לילי_רוזנפלד",
+    "folder": "נומרולוגיה לילי רוזנפלד",
+    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\נומרולוגיה לילי רוזנפלד",
+    "display_name": "נומרולוגיה לילי רוזנפלד",
+    "adapter": "generic",
+    "enabled_for_research": true,
+    "enabled_for_customers": false,
+    "added_at": 1774097610.419591,
+    "notes": ""
+  },
+  "נומרולוגיה_מעשית_אורלי_רוזנברג": {
+    "key": "נומרולוגיה_מעשית_אורלי_רוזנברג",
+    "folder": "נומרולוגיה מעשית אורלי רוזנברג",
+    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\נומרולוגיה מעשית אורלי רוזנברג",
+    "display_name": "נומרולוגיה מעשית אורלי רוזנברג",
+    "adapter": "generic",
+    "enabled_for_research": true,
+    "enabled_for_customers": false,
+    "added_at": 1774098094.6798573,
+    "notes": ""
+  },
+  "men": {
+    "key": "men",
+    "folder": "men",
+    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\men",
+    "display_name": "men",
+    "adapter": "generic",
+    "enabled_for_research": true,
+    "enabled_for_customers": true,
+    "added_at": 1773944192.7900782,
+    "notes": ""
+  },
+  "women": {
+    "key": "women",
+    "folder": "women",
+    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\women",
+    "display_name": "women",
+    "adapter": "generic",
+    "enabled_for_research": true,
+    "enabled_for_customers": true,
+    "added_at": 1774095010.8462117,
+    "notes": ""
   }
 }
