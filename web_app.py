@@ -13,6 +13,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from numerology_calculator import NumerologyCalculator
 from config_manager import ConfigManager
 from gpt_report import generate_person_report
+from book_ingestion.book_reader_inspector import render_book_reader_inspector
 from research.streamlit_panel import render_research_panel
 import personal_y
 
@@ -432,6 +433,10 @@ def main():
 
 
     st.markdown("---")
+    with st.expander("📚 אינדקס הספרים", expanded=True):
+        st.caption("תצוגה ישירה של DB האינדוקס שנבנה מהספרים. כאן רואים את טקסט המקור, מצב ה-OCR, והערכים שנוצרו ממנו.")
+        render_book_reader_inspector(prefix="consultant_books")
+
     with st.expander("מחקר פנימי", expanded=False):
         render_research_panel(
             prefix="web_research",

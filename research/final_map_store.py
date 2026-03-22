@@ -43,6 +43,7 @@ class FinalMapStore:
                     layer_key       TEXT NOT NULL DEFAULT 'live',
                     decision_state  TEXT NOT NULL DEFAULT 'approved',
                     confidence      REAL NOT NULL DEFAULT 0.0,
+                    sort_index      INTEGER NOT NULL DEFAULT 0,
                     source_ref      TEXT NOT NULL DEFAULT '',
                     source_kind     TEXT NOT NULL DEFAULT 'cell',
                     cabinet_used    INTEGER NOT NULL DEFAULT 0,
@@ -103,6 +104,7 @@ class FinalMapStore:
                     "layer_key": "TEXT NOT NULL DEFAULT 'live'",
                     "decision_state": "TEXT NOT NULL DEFAULT 'approved'",
                     "confidence": "REAL NOT NULL DEFAULT 0.0",
+                    "sort_index": "INTEGER NOT NULL DEFAULT 0",
                     "source_ref": "TEXT NOT NULL DEFAULT ''",
                 },
             )
@@ -280,10 +282,12 @@ class FinalMapStore:
         entry_id = self._clean_text(entry.get("id")) or str(uuid.uuid4())
         version_key = self._clean_text(entry.get("version_key")) or "live"
         layer_key = self._clean_text(entry.get("layer_key")) or scope
+        sort_index = int(entry.get("sort_index") or 0)
+        profile_key = self._clean_text(entry.get("profile_key"))
         payload = {
             "id": entry_id,
             "map_scope": scope,
-            "profile_key": self._clean_text(entry.get("profile_key")),
+            "profile_key": profile_key,
             "profile_label": self._clean_text(entry.get("profile_label")),
             "row_key": self._clean_text(entry.get("row_key")),
             "row_label": self._clean_text(entry.get("row_label")),
@@ -298,6 +302,7 @@ class FinalMapStore:
             "layer_key": layer_key,
             "decision_state": self._clean_text(entry.get("decision_state")) or "approved",
             "confidence": float(entry.get("confidence") or 0.0),
+            "sort_index": sort_index,
             "source_ref": self._clean_text(entry.get("source_ref")),
             "source_kind": self._clean_text(source_kind or entry.get("source_kind") or "cell") or "cell",
             "cabinet_used": 1 if entry.get("cabinet_used") else 0,
@@ -305,14 +310,27 @@ class FinalMapStore:
         }
         key = self._entry_key(payload, scope)
         with self._connect() as conn:
+            existing = conn.execute(
+                """
+                SELECT id, sort_index
+                FROM map_entries
+                WHERE map_scope = ? AND profile_key = ? AND row_key = ? AND method_key = ? AND value = ?
+                """,
+                key,
+            ).fetchone()
+            if existing is not None:
+                existing_sort = int(existing["sort_index"] or 0)
+                if payload["sort_index"] <= 0:
+                    payload["sort_index"] = existing_sort
+
             conn.execute(
                 """
                 INSERT INTO map_entries (
                     id, map_scope, profile_key, profile_label, row_key, row_label,
                     method_key, method_label, value, summary, preview, sections_json,
                     snapshot_json, version_key, layer_key, decision_state, confidence,
-                    source_ref, source_kind, cabinet_used, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+                    sort_index, source_ref, source_kind, cabinet_used, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
                 ON CONFLICT(map_scope, profile_key, row_key, method_key, value) DO UPDATE SET
                     profile_label = excluded.profile_label,
                     row_label = excluded.row_label,
@@ -325,6 +343,7 @@ class FinalMapStore:
                     layer_key = excluded.layer_key,
                     decision_state = excluded.decision_state,
                     confidence = excluded.confidence,
+                    sort_index = excluded.sort_index,
                     source_ref = excluded.source_ref,
                     source_kind = excluded.source_kind,
                     cabinet_used = excluded.cabinet_used,
@@ -348,6 +367,7 @@ class FinalMapStore:
                     payload["layer_key"],
                     payload["decision_state"],
                     payload["confidence"],
+                    payload["sort_index"],
                     payload["source_ref"],
                     payload["source_kind"],
                     payload["cabinet_used"],
@@ -436,7 +456,7 @@ class FinalMapStore:
         query = "SELECT * FROM map_entries"
         if clauses:
             query += " WHERE " + " AND ".join(clauses)
-        query += " ORDER BY CASE map_scope WHEN 'auto' THEN 0 ELSE 1 END, updated_at DESC, created_at DESC"
+        query += " ORDER BY CASE map_scope WHEN 'auto' THEN 0 ELSE 1 END, sort_index ASC, updated_at DESC, created_at DESC"
         if limit:
             query += " LIMIT ?"
             params.append(int(limit))
@@ -562,6 +582,47 @@ class FinalMapStore:
             "entries": [self._row_to_entry(row) for row in entry_rows if row is not None],
             "notes": [dict(row) for row in note_rows if row is not None],
         }
+
+    def reorder_entries(self, scope: str, profile_key: str, ordered_ids: Iterable[str]) -> list[dict[str, Any]]:
+        scope = self._scope(scope)
+        profile_key = self._clean_text(profile_key)
+        ordered_ids = [str(entry_id).strip() for entry_id in ordered_ids if str(entry_id).strip()]
+        if not ordered_ids:
+            return self.list_entries(scope=scope, profile_key=profile_key or None, limit=500)
+
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT *
+                FROM map_entries
+                WHERE map_scope = ? AND profile_key = ?
+                ORDER BY sort_index ASC, updated_at DESC, created_at DESC
+                """,
+                (scope, profile_key),
+            ).fetchall()
+            by_id = {str(row["id"]): row for row in rows}
+            ordered_rows = []
+            seen: set[str] = set()
+            for entry_id in ordered_ids:
+                row = by_id.get(entry_id)
+                if row is None:
+                    continue
+                ordered_rows.append(row)
+                seen.add(entry_id)
+            for row in rows:
+                entry_id = str(row["id"])
+                if entry_id in seen:
+                    continue
+                ordered_rows.append(row)
+
+            for index, row in enumerate(ordered_rows, start=1):
+                conn.execute(
+                    "UPDATE map_entries SET sort_index = ?, updated_at = ? WHERE id = ?",
+                    (index, self._utc_now(), row["id"]),
+                )
+            conn.commit()
+
+        return self.list_entries(scope=scope, profile_key=profile_key or None, limit=500)
 
     def create_version(
         self,
