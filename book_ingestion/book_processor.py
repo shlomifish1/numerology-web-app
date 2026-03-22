@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
@@ -27,6 +28,8 @@ class BookProcessor:
         text = inspection.get('text', '') or ''
         metadata = dict(inspection.get('metadata', {}))
         metadata['method'] = method
+        outline = self._extract_outline(title=title, text=text)
+        metadata['outline'] = outline
         record = {
             'corpus': corpus,
             'title': title,
@@ -48,6 +51,14 @@ class BookProcessor:
             content_text=text[:12000] if text else '',
             content_json=metadata,
         )
+        outline_text = self._format_outline(title=title, outline=outline)
+        if outline_text:
+            self.store.save_book_artifact(
+                book_id,
+                artifact_type='book_outline',
+                content_text=outline_text,
+                content_json=outline,
+            )
         return {'book_id': book_id, 'record': record, 'metadata': metadata}
 
     def index_corpus(self, corpus: str, folder_path: str, method: Optional[str] = None) -> List[Dict[str, object]]:
@@ -146,6 +157,72 @@ class BookProcessor:
     def _should_skip(self, path: Path) -> bool:
         name = path.name.lower()
         return name.endswith('_books.md') or name.endswith('_category_map.md') or name.endswith('_ocr_queue.md') or name.endswith('_runtime.md') or name.endswith('_seed_plan.md') or name.endswith('_taxonomy.md') or name.endswith('_intake.md')
+
+    def _extract_outline(self, title: str, text: str) -> Dict[str, object]:
+        cleaned_text = re.sub(r'\r\n?', '\n', str(text or ''))
+        lines = [re.sub(r'\s+', ' ', line).strip() for line in cleaned_text.split('\n')]
+        headings: List[str] = []
+        for line in lines:
+            if not line:
+                continue
+            candidate = line.strip('•*-—–# \t:').strip()
+            if not candidate or len(candidate) > 120:
+                continue
+            alpha_count = sum(1 for ch in candidate if ch.isalpha())
+            token_count = len(candidate.split())
+            if not (
+                candidate.endswith(':')
+                or candidate[:1].isdigit()
+                or candidate.lower().startswith(('chapter', 'topic', 'subject', 'section', 'פרק', 'נושא'))
+                or (alpha_count >= 4 and token_count <= 12 and len(candidate) <= 80)
+            ):
+                continue
+            if candidate not in headings:
+                headings.append(candidate)
+            if len(headings) >= 12:
+                break
+
+        raw_tokens = re.findall(r'[\w\u0590-\u05FF]+', f"{title} {' '.join(headings)} {cleaned_text[:4000]}".lower())
+        stopwords = {
+            'and', 'or', 'the', 'a', 'an', 'of', 'to', 'in', 'for', 'with', 'by',
+            'and', 'the', 'this', 'that', 'from', 'into', 'על', 'של', 'את', 'עם',
+            'הוא', 'היא', 'זה', 'זו', 'זהו', 'הספר', 'ספר', 'פרק', 'נושא', 'תוכן',
+        }
+        keywords: List[str] = []
+        for token in raw_tokens:
+            token = token.strip()
+            if len(token) < 3 or token in stopwords:
+                continue
+            if token not in keywords:
+                keywords.append(token)
+            if len(keywords) >= 20:
+                break
+
+        topic_candidates = headings[:5] if headings else keywords[:5]
+        summary_bits = [bit for bit in [title.strip(), headings[0] if headings else '', headings[1] if len(headings) > 1 else ''] if bit]
+        return {
+            'title': title,
+            'headings': headings,
+            'keywords': keywords,
+            'topic_candidates': topic_candidates,
+            'summary': ' | '.join(summary_bits),
+        }
+
+    def _format_outline(self, title: str, outline: Dict[str, object]) -> str:
+        parts = [f"title: {title}"]
+        summary = str(outline.get('summary') or '').strip()
+        if summary:
+            parts.append(f"summary: {summary}")
+        headings = [str(item).strip() for item in list(outline.get('headings') or [])[:8] if str(item).strip()]
+        if headings:
+            parts.append("headings: " + " | ".join(headings))
+        keywords = [str(item).strip() for item in list(outline.get('keywords') or [])[:12] if str(item).strip()]
+        if keywords:
+            parts.append("keywords: " + " | ".join(keywords))
+        topics = [str(item).strip() for item in list(outline.get('topic_candidates') or [])[:6] if str(item).strip()]
+        if topics:
+            parts.append("topics: " + " | ".join(topics))
+        return "\n".join(parts).strip()
 
 
 
