@@ -70,6 +70,15 @@ class ComparisonEngine:
             method_result["result"] = result
             rendered_methods.append(method_result)
 
+        pythagorean_result = next(
+            (
+                method.get("result", {})
+                for method in rendered_methods
+                if method.get("key") == "pythagorean_existing"
+            ),
+            {},
+        )
+
         comparison_rows = []
         for row_key, row_label in DEFAULT_ROWS:
             comparison_rows.append(
@@ -95,4 +104,6 @@ class ComparisonEngine:
             },
             "methods": rendered_methods,
             "rows": comparison_rows,
+            "report_sections": list(pythagorean_result.get("report_sections") or []),
+            "report_summary": dict(pythagorean_result.get("report_summary") or {}),
         }

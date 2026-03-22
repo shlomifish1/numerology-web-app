@@ -75,6 +75,24 @@ class FinalMapStore:
                     source_kind   TEXT NOT NULL DEFAULT 'manual',
                     created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+
+                CREATE TABLE IF NOT EXISTS research_history (
+                    id                   TEXT PRIMARY KEY,
+                    owner_email          TEXT NOT NULL DEFAULT '',
+                    history_key          TEXT NOT NULL DEFAULT '',
+                    title                TEXT NOT NULL DEFAULT '',
+                    profile_key          TEXT NOT NULL DEFAULT '',
+                    profile_label        TEXT NOT NULL DEFAULT '',
+                    inputs_json          TEXT NOT NULL DEFAULT '{}',
+                    report_summary_json  TEXT NOT NULL DEFAULT '{}',
+                    report_sections_json TEXT NOT NULL DEFAULT '[]',
+                    methods_count        INTEGER NOT NULL DEFAULT 0,
+                    rows_count           INTEGER NOT NULL DEFAULT 0,
+                    created_at           TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at           TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    last_used_at         TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(owner_email, history_key)
+                );
                 """
             )
             self._ensure_columns(
@@ -98,6 +116,22 @@ class FinalMapStore:
                     "source_ref": "TEXT NOT NULL DEFAULT ''",
                 },
             )
+            self._ensure_columns(
+                conn,
+                "research_history",
+                {
+                    "title": "TEXT NOT NULL DEFAULT ''",
+                    "profile_key": "TEXT NOT NULL DEFAULT ''",
+                    "profile_label": "TEXT NOT NULL DEFAULT ''",
+                    "inputs_json": "TEXT NOT NULL DEFAULT '{}'",
+                    "report_summary_json": "TEXT NOT NULL DEFAULT '{}'",
+                    "report_sections_json": "TEXT NOT NULL DEFAULT '[]'",
+                    "methods_count": "INTEGER NOT NULL DEFAULT 0",
+                    "rows_count": "INTEGER NOT NULL DEFAULT 0",
+                    "updated_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+                    "last_used_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+                },
+            )
             conn.commit()
 
     def _ensure_columns(self, conn: sqlite3.Connection, table: str, columns: dict[str, str]) -> None:
@@ -105,6 +139,41 @@ class FinalMapStore:
         for column, definition in columns.items():
             if column not in existing:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+    @staticmethod
+    def _build_history_key(inputs: dict[str, Any]) -> str:
+        hebrew = inputs.get("hebrew_birthdate") if isinstance(inputs.get("hebrew_birthdate"), dict) else {}
+        parts = [
+            str(inputs.get("first_name") or "").strip().lower(),
+            str(inputs.get("last_name") or "").strip().lower(),
+            str(inputs.get("day") or "").strip(),
+            str(inputs.get("month") or "").strip(),
+            str(inputs.get("year") or "").strip(),
+            str(inputs.get("gender") or "").strip().lower(),
+            str(hebrew.get("day") or "").strip(),
+            str(hebrew.get("month") or "").strip(),
+            str(hebrew.get("year") or "").strip(),
+        ]
+        return "|".join(parts)
+
+    @staticmethod
+    def _build_history_title(inputs: dict[str, Any]) -> str:
+        name = " ".join(
+            part for part in [
+                str(inputs.get("first_name") or "").strip(),
+                str(inputs.get("last_name") or "").strip(),
+            ]
+            if part
+        ).strip()
+        date_bits = [
+            str(inputs.get("day") or "").strip(),
+            str(inputs.get("month") or "").strip(),
+            str(inputs.get("year") or "").strip(),
+        ]
+        date_label = "/".join(bit for bit in date_bits if bit) if any(date_bits) else ""
+        gender = str(inputs.get("gender") or "").strip().lower()
+        gender_label = "נקבה" if gender == "female" else "זכר"
+        return " · ".join(part for part in [name, date_label, gender_label] if part) or "מפה נומרולוגית"
 
     @staticmethod
     def _utc_now() -> str:
@@ -138,6 +207,73 @@ class FinalMapStore:
             str(entry.get("method_key") or ""),
             str(entry.get("value") or ""),
         )
+
+    def save_research_history(self, item: dict[str, Any], owner_email: str = "") -> dict[str, Any]:
+        history_id = self._clean_text(item.get("id")) or str(uuid.uuid4())
+        owner_email = self._clean_text(owner_email).lower()
+        inputs = item.get("inputs") if isinstance(item.get("inputs"), dict) else {}
+        summary = item.get("report_summary") if isinstance(item.get("report_summary"), dict) else {}
+        sections = item.get("report_sections") if isinstance(item.get("report_sections"), list) else []
+        history_key = self._clean_text(item.get("history_key")) or self._build_history_key(inputs)
+        title = self._clean_text(item.get("title")) or self._build_history_title(inputs)
+        profile_key = self._clean_text(item.get("profile_key"))
+        profile_label = self._clean_text(item.get("profile_label"))
+        payload = {
+            "id": history_id,
+            "owner_email": owner_email,
+            "history_key": history_key,
+            "title": title,
+            "profile_key": profile_key,
+            "profile_label": profile_label,
+            "inputs_json": json.dumps(inputs, ensure_ascii=False),
+            "report_summary_json": json.dumps(summary, ensure_ascii=False),
+            "report_sections_json": json.dumps(sections, ensure_ascii=False),
+            "methods_count": int(item.get("methods_count") or 0),
+            "rows_count": int(item.get("rows_count") or 0),
+            "updated_at": self._utc_now(),
+            "last_used_at": self._utc_now(),
+        }
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO research_history (
+                    id, owner_email, history_key, title, profile_key, profile_label,
+                    inputs_json, report_summary_json, report_sections_json,
+                    methods_count, rows_count, created_at, updated_at, last_used_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)
+                ON CONFLICT(owner_email, history_key) DO UPDATE SET
+                    title = excluded.title,
+                    profile_key = excluded.profile_key,
+                    profile_label = excluded.profile_label,
+                    inputs_json = excluded.inputs_json,
+                    report_summary_json = excluded.report_summary_json,
+                    report_sections_json = excluded.report_sections_json,
+                    methods_count = excluded.methods_count,
+                    rows_count = excluded.rows_count,
+                    updated_at = excluded.updated_at,
+                    last_used_at = excluded.last_used_at
+                """,
+                (
+                    payload["id"],
+                    payload["owner_email"],
+                    payload["history_key"],
+                    payload["title"],
+                    payload["profile_key"],
+                    payload["profile_label"],
+                    payload["inputs_json"],
+                    payload["report_summary_json"],
+                    payload["report_sections_json"],
+                    payload["methods_count"],
+                    payload["rows_count"],
+                    payload["updated_at"],
+                    payload["last_used_at"],
+                ),
+            )
+            row = conn.execute(
+                "SELECT * FROM research_history WHERE owner_email = ? AND history_key = ?",
+                (owner_email, history_key),
+            ).fetchone()
+        return self._row_to_history(row) or {}
 
     def upsert_entry(self, entry: dict[str, Any], scope: str = "auto", source_kind: str = "cell") -> dict[str, Any]:
         scope = self._scope(scope)
@@ -543,4 +679,48 @@ class FinalMapStore:
         item["confidence"] = float(item.get("confidence") or 0.0)
         item["source_ref"] = item.get("source_ref") or ""
         item["source_kind"] = item.get("source_kind") or ""
+        return item
+
+    def list_research_history(self, owner_email: str = "", limit: int = 8) -> list[dict[str, Any]]:
+        owner_email = self._clean_text(owner_email).lower()
+        clauses: list[str] = []
+        params: list[Any] = []
+        if owner_email:
+            clauses.append("owner_email = ?")
+            params.append(owner_email)
+        query = "SELECT * FROM research_history"
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY last_used_at DESC, updated_at DESC, created_at DESC"
+        if limit:
+            query += " LIMIT ?"
+            params.append(int(limit))
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [self._row_to_history(row) for row in rows if row is not None]
+
+    def clear_research_history(self, owner_email: str = "") -> int:
+        owner_email = self._clean_text(owner_email).lower()
+        query = "DELETE FROM research_history"
+        params: list[Any] = []
+        if owner_email:
+            query += " WHERE owner_email = ?"
+            params.append(owner_email)
+        with self._connect() as conn:
+            cur = conn.execute(query, params)
+            conn.commit()
+            return int(cur.rowcount or 0)
+
+    def _row_to_history(self, row: sqlite3.Row | None) -> dict[str, Any] | None:
+        if row is None:
+            return None
+        item = dict(row)
+        item["inputs"] = self._json_load(item.get("inputs_json"), {})
+        item["report_summary"] = self._json_load(item.get("report_summary_json"), {})
+        item["report_sections"] = self._json_load(item.get("report_sections_json"), [])
+        item["methods_count"] = int(item.get("methods_count") or 0)
+        item["rows_count"] = int(item.get("rows_count") or 0)
+        item["owner_email"] = item.get("owner_email") or ""
+        item["history_key"] = item.get("history_key") or ""
+        item["title"] = item.get("title") or ""
         return item
