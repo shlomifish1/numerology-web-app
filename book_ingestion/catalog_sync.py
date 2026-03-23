@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Dict
 
@@ -13,6 +14,21 @@ from .ocr_batch import PendingOCRRunner
 from .ocr_planner import OCRPlanner
 from .raw_book_router import RawBookRouter
 from .spirit_mapper import SpiritCorpusMapper
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+INTERPRETATIONS_ROOT = PROJECT_ROOT / "interpretations"
+
+
+def _find_source(pattern: str) -> Path:
+    matches = list(INTERPRETATIONS_ROOT.rglob(pattern))
+    if not matches:
+        raise FileNotFoundError(f'Could not locate source file matching {pattern!r}')
+    return matches[0]
+
+
+ASTROLOGY_MEDIATION_SOURCE = _find_source("num_astro_json.json")
+SIFUR_FINAL_SCHEMA_SOURCE = _find_source("*__final_schema.json")
 
 
 CORPORA: Dict[str, Dict[str, str]] = {
@@ -54,9 +70,14 @@ CORPORA: Dict[str, Dict[str, str]] = {
         'method': 'astrology',
     },
     'astrology_mediation': {
-        'folder': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\נומרולוגיה בתיווך האסטרולוגיה',
-        'catalog': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\נומרולוגיה בתיווך האסטרולוגיה\astrology_mediation_books.md',
+        'source': str(ASTROLOGY_MEDIATION_SOURCE),
+        'catalog': str(ASTROLOGY_MEDIATION_SOURCE.parent / 'astrology_mediation_books.md'),
         'method': 'astrology_mediation',
+    },
+    'sifur_hanumerology_hashalem': {
+        'source': str(SIFUR_FINAL_SCHEMA_SOURCE),
+        'catalog': str(SIFUR_FINAL_SCHEMA_SOURCE.parent / 'sifur_hanumerology_hashalem_books.md'),
+        'method': 'generic',
     },
     'independent_calc': {
         'folder': r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\נומרולוגיה לחישוב עצמאי אסתי גוטמן חוטר גזע',
@@ -74,13 +95,55 @@ RAW_BOOKS_FOLDER = r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyRepo
 RAW_BOOKS_REPORT = r'C:\Users\fishman-ai-server\Desktop\ai_agents\NumerologyReportGenerator\interpretations\raw_books\raw_books_intake.md'
 
 
+def _source_path(config: Dict[str, str]) -> Path:
+    return Path(config.get('source') or config['folder'])
+
+
+def _discover_json_corpora() -> Dict[str, Dict[str, str]]:
+    discovered: Dict[str, Dict[str, str]] = {}
+    priority_files = ('num_astro_json.json', '*__final_schema.json', '*__strict_schema.json', '*__normalized.json')
+    for folder in sorted(INTERPRETATIONS_ROOT.iterdir()):
+        if not folder.is_dir():
+            continue
+        source_file = None
+        for pattern in priority_files:
+            matches = sorted(folder.glob(pattern))
+            if matches:
+                source_file = matches[0]
+                break
+        if not source_file:
+            continue
+        corpus = folder.name
+        try:
+            payload = json.loads(source_file.read_text(encoding='utf-8'))
+            book_id = str(payload.get('book_id') or '').strip()
+            if book_id:
+                corpus = book_id
+        except Exception:
+            pass
+        if corpus in CORPORA or corpus in discovered:
+            continue
+        method = 'astrology_mediation' if source_file.name == 'num_astro_json.json' else 'generic'
+        discovered[corpus] = {
+            'source': str(source_file),
+            'catalog': str(folder / f'{corpus}_books.md'),
+            'method': method,
+        }
+    return discovered
+
+
 def refresh_all() -> Dict[str, int]:
     processor = BookProcessor()
     summary: Dict[str, int] = {}
-    for corpus, config in CORPORA.items():
-        folder = Path(config['folder'])
-        folder.mkdir(parents=True, exist_ok=True)
-        processor.index_corpus(corpus, str(folder), method=config['method'])
+    corpora = dict(CORPORA)
+    corpora.update(_discover_json_corpora())
+    for corpus, config in corpora.items():
+        source_path = _source_path(config)
+        if config.get('source'):
+            source_path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            source_path.mkdir(parents=True, exist_ok=True)
+        processor.index_corpus(corpus, str(source_path), method=config['method'])
         processor.export_markdown_catalog(corpus, config['catalog'])
         summary[corpus] = len(processor.store.list_books(corpus=corpus))
 
