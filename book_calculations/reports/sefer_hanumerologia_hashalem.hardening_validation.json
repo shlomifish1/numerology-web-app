@@ -1,0 +1,1081 @@
+{
+  "generated_at": "2026-03-25T07:29:28.519623+00:00",
+  "calculator_id": "sefer_hanumerologia_hashalem",
+  "validation_scope": "hardening",
+  "scenarios_executed": 10,
+  "total_runs_executed": 30,
+  "passed_runs": 30,
+  "failed_runs": 0,
+  "deterministic_across_repeats": true,
+  "default_calculator_id": "green_legacy",
+  "default_is_green_legacy": true,
+  "green_legacy_still_works": true,
+  "before_after_counts": {
+    "computable_before": 87,
+    "computable_after": 87,
+    "notes": "No hardening-driven definition changes were applied during this pass."
+  },
+  "issues_found": [
+    "No blocking integrity or determinism issues were detected."
+  ],
+  "issues_fixed": [
+    "Hardening validator alignment check was tightened to avoid false failures when a computable definition item is blocked only by missing optional inputs.",
+    "No runtime/definition changes were required by this validation pass."
+  ],
+  "issues_open": [
+    "162 calculations remain blocked by unsupported_executor_type in baseline scenario."
+  ],
+  "scenario_results": [
+    {
+      "scenario_id": "s01_standard_hebrew",
+      "payload": {
+        "full_name": "???? ???",
+        "birth_date": "1990-05-17",
+        "current_year": 2026,
+        "letter": "?"
+      },
+      "deterministic": true,
+      "runs": [
+        {
+          "iteration": 1,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 2,
+            "without_interpretation": 281
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "935018c3dd7aa4eca95ce99fcd987db9f40df57a16ffc52654bf97e06f18d84f"
+        },
+        {
+          "iteration": 2,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 2,
+            "without_interpretation": 281
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "935018c3dd7aa4eca95ce99fcd987db9f40df57a16ffc52654bf97e06f18d84f"
+        },
+        {
+          "iteration": 3,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 2,
+            "without_interpretation": 281
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "935018c3dd7aa4eca95ce99fcd987db9f40df57a16ffc52654bf97e06f18d84f"
+        }
+      ]
+    },
+    {
+      "scenario_id": "s02_known_name",
+      "payload": {
+        "full_name": "???? ????",
+        "birth_date": "1984-11-02",
+        "current_year": 2026,
+        "letter": "?"
+      },
+      "deterministic": true,
+      "runs": [
+        {
+          "iteration": 1,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 1,
+            "without_interpretation": 282
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "268f37ae513edb73833cd207dd6ad9b0a58fcafdde9f4223dc4a664965548f6c"
+        },
+        {
+          "iteration": 2,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 1,
+            "without_interpretation": 282
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "268f37ae513edb73833cd207dd6ad9b0a58fcafdde9f4223dc4a664965548f6c"
+        },
+        {
+          "iteration": 3,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 1,
+            "without_interpretation": 282
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "268f37ae513edb73833cd207dd6ad9b0a58fcafdde9f4223dc4a664965548f6c"
+        }
+      ]
+    },
+    {
+      "scenario_id": "s03_male_name",
+      "payload": {
+        "full_name": "??? ???",
+        "birth_date": "1978-09-30",
+        "current_year": 2026,
+        "letter": "?"
+      },
+      "deterministic": true,
+      "runs": [
+        {
+          "iteration": 1,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 2,
+            "without_interpretation": 281
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "2c6aa9c8bc218f3a807639e65a5ff73c24bfb1a4d5ffca2cea779b33c73409e1"
+        },
+        {
+          "iteration": 2,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 2,
+            "without_interpretation": 281
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "2c6aa9c8bc218f3a807639e65a5ff73c24bfb1a4d5ffca2cea779b33c73409e1"
+        },
+        {
+          "iteration": 3,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 2,
+            "without_interpretation": 281
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "2c6aa9c8bc218f3a807639e65a5ff73c24bfb1a4d5ffca2cea779b33c73409e1"
+        }
+      ]
+    },
+    {
+      "scenario_id": "s04_multi_component",
+      "payload": {
+        "full_name": "???? ?? ?????",
+        "birth_date": "1993-12-21",
+        "current_year": 2026,
+        "letter": "?"
+      },
+      "deterministic": true,
+      "runs": [
+        {
+          "iteration": 1,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 2,
+            "without_interpretation": 281
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "c177bc59ee36ca8612c2346708a392fb026b12f3120b79e55b85d0364351904f"
+        },
+        {
+          "iteration": 2,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 2,
+            "without_interpretation": 281
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "c177bc59ee36ca8612c2346708a392fb026b12f3120b79e55b85d0364351904f"
+        },
+        {
+          "iteration": 3,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 2,
+            "without_interpretation": 281
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "c177bc59ee36ca8612c2346708a392fb026b12f3120b79e55b85d0364351904f"
+        }
+      ]
+    },
+    {
+      "scenario_id": "s05_short_name",
+      "payload": {
+        "full_name": "??",
+        "birth_date": "2001-01-09",
+        "current_year": 2026,
+        "letter": "?"
+      },
+      "deterministic": true,
+      "runs": [
+        {
+          "iteration": 1,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 2,
+            "without_interpretation": 281
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "fb1c1573c63cbdad0aab942f5f57b5428d3e8829f445748e37239f5886fb59af"
+        },
+        {
+          "iteration": 2,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 2,
+            "without_interpretation": 281
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "fb1c1573c63cbdad0aab942f5f57b5428d3e8829f445748e37239f5886fb59af"
+        },
+        {
+          "iteration": 3,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 2,
+            "without_interpretation": 281
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "fb1c1573c63cbdad0aab942f5f57b5428d3e8829f445748e37239f5886fb59af"
+        }
+      ]
+    },
+    {
+      "scenario_id": "s06_single_letter_no_optional",
+      "payload": {
+        "full_name": "?",
+        "birth_date": "2000-02-29"
+      },
+      "deterministic": true,
+      "runs": [
+        {
+          "iteration": 1,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 84,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_inputs": 3,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 1,
+            "without_interpretation": 282
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "1a2908b2a965369527a93e8bbd1ccab35b755abc5112f6c353d38eab2c3969e9"
+        },
+        {
+          "iteration": 2,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 84,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_inputs": 3,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 1,
+            "without_interpretation": 282
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "1a2908b2a965369527a93e8bbd1ccab35b755abc5112f6c353d38eab2c3969e9"
+        },
+        {
+          "iteration": 3,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 84,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_inputs": 3,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 1,
+            "without_interpretation": 282
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "1a2908b2a965369527a93e8bbd1ccab35b755abc5112f6c353d38eab2c3969e9"
+        }
+      ]
+    },
+    {
+      "scenario_id": "s07_long_name",
+      "payload": {
+        "full_name": "???? ?? ??? ?????",
+        "birth_date": "1965-03-01",
+        "current_year": 2026,
+        "letter": "?"
+      },
+      "deterministic": true,
+      "runs": [
+        {
+          "iteration": 1,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 0,
+            "without_interpretation": 283
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "27f5e03d7883e8d5696e4fa1db3830e1f7bf8f00c9649bb349d2903f8d578ca0"
+        },
+        {
+          "iteration": 2,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 0,
+            "without_interpretation": 283
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "27f5e03d7883e8d5696e4fa1db3830e1f7bf8f00c9649bb349d2903f8d578ca0"
+        },
+        {
+          "iteration": 3,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 0,
+            "without_interpretation": 283
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "27f5e03d7883e8d5696e4fa1db3830e1f7bf8f00c9649bb349d2903f8d578ca0"
+        }
+      ]
+    },
+    {
+      "scenario_id": "s08_repeating_digits_date",
+      "payload": {
+        "full_name": "?? ??",
+        "birth_date": "2012-12-12",
+        "current_year": 2026,
+        "letter": "?"
+      },
+      "deterministic": true,
+      "runs": [
+        {
+          "iteration": 1,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 0,
+            "without_interpretation": 283
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "29c2434f5b99de5fd917eba61cf53a897ad9c7d7183ee45385e6b5b88a061060"
+        },
+        {
+          "iteration": 2,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 0,
+            "without_interpretation": 283
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "29c2434f5b99de5fd917eba61cf53a897ad9c7d7183ee45385e6b5b88a061060"
+        },
+        {
+          "iteration": 3,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 0,
+            "without_interpretation": 283
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "29c2434f5b99de5fd917eba61cf53a897ad9c7d7183ee45385e6b5b88a061060"
+        }
+      ]
+    },
+    {
+      "scenario_id": "s09_two_parts",
+      "payload": {
+        "full_name": "??? ???",
+        "birth_date": "1988-06-07",
+        "current_year": 2026,
+        "letter": "?"
+      },
+      "deterministic": true,
+      "runs": [
+        {
+          "iteration": 1,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 1,
+            "without_interpretation": 282
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "7b7a5686e3e40c863fce900afdcb4815cfa7383fff3e58097d100899a218d253"
+        },
+        {
+          "iteration": 2,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 1,
+            "without_interpretation": 282
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "7b7a5686e3e40c863fce900afdcb4815cfa7383fff3e58097d100899a218d253"
+        },
+        {
+          "iteration": 3,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 1,
+            "without_interpretation": 282
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "7b7a5686e3e40c863fce900afdcb4815cfa7383fff3e58097d100899a218d253"
+        }
+      ]
+    },
+    {
+      "scenario_id": "s10_old_date",
+      "payload": {
+        "full_name": "?",
+        "birth_date": "1970-01-01",
+        "current_year": 2026,
+        "letter": "?"
+      },
+      "deterministic": true,
+      "runs": [
+        {
+          "iteration": 1,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 1,
+            "without_interpretation": 282
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "89dbcee42408953c0e90e8a0a39b6c8cb8165192864428ab135b3c04c8376755"
+        },
+        {
+          "iteration": 2,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 1,
+            "without_interpretation": 282
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "89dbcee42408953c0e90e8a0a39b6c8cb8165192864428ab135b3c04c8376755"
+        },
+        {
+          "iteration": 3,
+          "ok": true,
+          "summary": {
+            "total_calculations": 283,
+            "computable_returned": 87,
+            "blocked_by_reason": {
+              "unsupported_executor_type": 162,
+              "interpretation_only": 13,
+              "missing_input_mapping": 11,
+              "missing_formula": 9,
+              "missing_result_value_table": 1
+            },
+            "with_interpretation": 1,
+            "without_interpretation": 282
+          },
+          "checks": {
+            "calculator_loads": true,
+            "definition_loads": true,
+            "execution_completes": true,
+            "no_silent_drop": true,
+            "totals_add_up": true,
+            "unique_calc_keys": true,
+            "missing_status_count": 0,
+            "unknown_status_count": 0,
+            "computed_missing_label_or_source_count": 0,
+            "expected_interp_missing_count": 0,
+            "def_computable_runtime_blocked_count": 0
+          },
+          "digest": "89dbcee42408953c0e90e8a0a39b6c8cb8165192864428ab135b3c04c8376755"
+        }
+      ]
+    }
+  ]
+}

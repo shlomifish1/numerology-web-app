@@ -1,26 +1,4 @@
 {
-  "astrology": {
-    "key": "astrology",
-    "folder": "astrology",
-    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\astrology",
-    "display_name": "astrology",
-    "adapter": "astrology",
-    "enabled_for_research": true,
-    "enabled_for_customers": false,
-    "added_at": 1773432754.883713,
-    "notes": ""
-  },
-  "spirit": {
-    "key": "spirit",
-    "folder": "spirit",
-    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\spirit",
-    "display_name": "spirit",
-    "adapter": "spirit",
-    "enabled_for_research": true,
-    "enabled_for_customers": false,
-    "added_at": 1773433518.44369,
-    "notes": ""
-  },
   "ספר_הנומרולוגיה_השלם": {
     "key": "ספר_הנומרולוגיה_השלם",
     "folder": "ספר הנומרולוגיה השלם",
@@ -76,17 +54,6 @@
     "added_at": 1774097450.4260108,
     "notes": ""
   },
-  "more_books": {
-    "key": "more_books",
-    "folder": "more_books",
-    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\more_books",
-    "display_name": "more_books",
-    "adapter": "generic",
-    "enabled_for_research": true,
-    "enabled_for_customers": false,
-    "added_at": 1774097930.787822,
-    "notes": ""
-  },
   "לי_ברגמן_שרה_ברק_אלי_מורג_נומרולוגיה": {
     "key": "לי_ברגמן_שרה_ברק_אלי_מורג_נומרולוגיה",
     "folder": "לי ברגמן שרה ברק אלי מורג נומרולוגיה",
@@ -140,6 +107,17 @@
     "enabled_for_research": true,
     "enabled_for_customers": true,
     "added_at": 1774095010.8462117,
+    "notes": ""
+  },
+  "הקוד_השנתי": {
+    "key": "הקוד_השנתי",
+    "folder": "הקוד השנתי",
+    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\הקוד השנתי",
+    "display_name": "הקוד השנתי",
+    "adapter": "generic",
+    "enabled_for_research": true,
+    "enabled_for_customers": false,
+    "added_at": 1774249913.2795248,
     "notes": ""
   }
 }

@@ -1,0 +1,53 @@
+{
+  "generated_at": "2026-03-25T06:38:05.062395+00:00",
+  "book_id": "sefer_hanumerologia_hashalem",
+  "computable_before": 49,
+  "computable_after": 69,
+  "promoted_count": 20,
+  "promoted_calculations": [
+    "birth_date_civil",
+    "destiny_path_calculation",
+    "encoded_letter_value",
+    "excess_numbers",
+    "first_letter",
+    "last_letter",
+    "letter_to_number_conversion",
+    "life_path_number",
+    "life_path_number_civil",
+    "life_path_number_gregorian",
+    "mispar_holeeda",
+    "misparim_haserim",
+    "misparim_mitivim",
+    "misparim_odfim",
+    "month_of_birth",
+    "name_number",
+    "name_number_calculation",
+    "shvil_goral",
+    "tablat_tadri_hasaparim",
+    "year_of_birth"
+  ],
+  "blocked_counts_by_reason": {
+    "unsupported_executor_type": 191,
+    "interpretation_only": 13,
+    "missing_formula": 9,
+    "missing_result_value_table": 1
+  },
+  "top_remaining_blockers": [
+    {
+      "reason": "unsupported_executor_type",
+      "count": 191
+    },
+    {
+      "reason": "interpretation_only",
+      "count": 13
+    },
+    {
+      "reason": "missing_formula",
+      "count": 9
+    },
+    {
+      "reason": "missing_result_value_table",
+      "count": 1
+    }
+  ]
+}

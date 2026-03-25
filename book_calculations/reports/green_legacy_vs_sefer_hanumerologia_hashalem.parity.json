@@ -1,0 +1,746 @@
+{
+  "generated_at": "2026-03-25T06:30:52.344933+00:00",
+  "comparison_id": "green_legacy_vs_sefer_hanumerologia_hashalem",
+  "legacy_calculator_id": "green_legacy",
+  "definition_calculator_id": "sefer_hanumerologia_hashalem",
+  "samples": [
+    {
+      "sample_id": "sample_1",
+      "first_name": "????",
+      "last_name": "???",
+      "birth_date": "1990-05-17",
+      "gender": "female",
+      "current_year": 2026,
+      "letter": "?"
+    },
+    {
+      "sample_id": "sample_2",
+      "first_name": "????",
+      "last_name": "????",
+      "birth_date": "1984-11-02",
+      "gender": "female",
+      "current_year": 2026,
+      "letter": "?"
+    },
+    {
+      "sample_id": "sample_3",
+      "first_name": "???",
+      "last_name": "???",
+      "birth_date": "1978-09-30",
+      "gender": "male",
+      "current_year": 2026,
+      "letter": "?"
+    },
+    {
+      "sample_id": "sample_4",
+      "first_name": "????",
+      "last_name": "?????",
+      "birth_date": "1993-12-21",
+      "gender": "female",
+      "current_year": 2026,
+      "letter": "?"
+    },
+    {
+      "sample_id": "sample_5",
+      "first_name": "??",
+      "last_name": "?????",
+      "birth_date": "2001-01-09",
+      "gender": "male",
+      "current_year": 2026,
+      "letter": "?"
+    }
+  ],
+  "mapping": {
+    "comparable_mappings": [
+      {
+        "legacy_field": "soul_expression",
+        "legacy_interpretation_key": "vowels",
+        "definition_calc_key": "soul_expression_number",
+        "equivalence": "same_concept_different_method",
+        "notes": "Both represent soul-expression from name vowels, but implementation details may differ."
+      },
+      {
+        "legacy_field": "soul_expression",
+        "legacy_interpretation_key": "vowels",
+        "definition_calc_key": "expression_of_the_soul",
+        "equivalence": "same_concept_different_method",
+        "notes": "Catalog alias of soul-expression concept; validate parity against legacy vowels output."
+      },
+      {
+        "legacy_field": "personality",
+        "legacy_interpretation_key": "consonants",
+        "definition_calc_key": "outer_behavior",
+        "equivalence": "same_concept_different_method",
+        "notes": "Both target external behavior/personality by name consonants."
+      },
+      {
+        "legacy_field": "name_value",
+        "legacy_interpretation_key": "",
+        "definition_calc_key": "source_chapter_1",
+        "equivalence": "same_concept_same_method",
+        "notes": "Both represent full-name numeric sum."
+      },
+      {
+        "legacy_field": "name_value",
+        "legacy_interpretation_key": "",
+        "definition_calc_key": "source_chapter_18",
+        "equivalence": "same_concept_same_method",
+        "notes": "Same formula text family as full-name sum."
+      },
+      {
+        "legacy_field": "name_value",
+        "legacy_interpretation_key": "",
+        "definition_calc_key": "source_chapter_26",
+        "equivalence": "same_concept_same_method",
+        "notes": "Same formula text family as full-name sum."
+      },
+      {
+        "legacy_field": "name_value",
+        "legacy_interpretation_key": "",
+        "definition_calc_key": "source_chapter_30",
+        "equivalence": "same_concept_same_method",
+        "notes": "Same formula text family as full-name sum."
+      },
+      {
+        "legacy_field": "name_value",
+        "legacy_interpretation_key": "",
+        "definition_calc_key": "source_chapter_31",
+        "equivalence": "same_concept_same_method",
+        "notes": "Same formula text family as full-name sum."
+      },
+      {
+        "legacy_field": "name_value",
+        "legacy_interpretation_key": "",
+        "definition_calc_key": "source_chapter_33",
+        "equivalence": "same_concept_same_method",
+        "notes": "Same formula text family as full-name sum."
+      }
+    ],
+    "non_equivalent_mappings": [
+      {
+        "legacy_field": "destiny",
+        "definition_calc_key": "destiny_path",
+        "reason": "Book definition computes destiny_path from soul+behavior; legacy destiny is a different core calculation."
+      },
+      {
+        "legacy_field": "personality",
+        "definition_calc_key": "personality_number",
+        "reason": "Book catalog marks personality_number as birth-date based in current extracted schema, not legacy consonant personality."
+      },
+      {
+        "legacy_field": "personal_year",
+        "definition_calc_key": "yearly_life_path_number",
+        "reason": "No stable formula-equivalent mapping validated yet."
+      },
+      {
+        "legacy_field": "hidden_year",
+        "definition_calc_key": "",
+        "reason": "No reliable definition-side key currently mapped."
+      },
+      {
+        "legacy_field": "birth_day",
+        "definition_calc_key": "birth_number",
+        "reason": "birth_number in definition is full birth-date reduction, not reduced day component."
+      }
+    ]
+  },
+  "per_calculation": [
+    {
+      "calc_key": "soul_expression_number",
+      "legacy_field": "soul_expression",
+      "equivalence": "same_concept_different_method",
+      "notes": "Both represent soul-expression from name vowels, but implementation details may differ.",
+      "definition_status": "computable",
+      "aggregate_comparison": "same",
+      "sample_results": [
+        {
+          "sample_id": "sample_1",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_2",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_3",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_4",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_5",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        }
+      ],
+      "counts": {
+        "matched_samples": 5,
+        "mismatched_samples": 0,
+        "missing_samples": 0
+      }
+    },
+    {
+      "calc_key": "expression_of_the_soul",
+      "legacy_field": "soul_expression",
+      "equivalence": "same_concept_different_method",
+      "notes": "Catalog alias of soul-expression concept; validate parity against legacy vowels output.",
+      "definition_status": "computable",
+      "aggregate_comparison": "same",
+      "sample_results": [
+        {
+          "sample_id": "sample_1",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_2",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_3",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_4",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_5",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        }
+      ],
+      "counts": {
+        "matched_samples": 5,
+        "mismatched_samples": 0,
+        "missing_samples": 0
+      }
+    },
+    {
+      "calc_key": "outer_behavior",
+      "legacy_field": "personality",
+      "equivalence": "same_concept_different_method",
+      "notes": "Both target external behavior/personality by name consonants.",
+      "definition_status": "computable",
+      "aggregate_comparison": "same",
+      "sample_results": [
+        {
+          "sample_id": "sample_1",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_2",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_3",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_4",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_5",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": true,
+          "definition_interpretation_available": false,
+          "interpretation_available": true,
+          "definition_runtime_status": "computed"
+        }
+      ],
+      "counts": {
+        "matched_samples": 5,
+        "mismatched_samples": 0,
+        "missing_samples": 0
+      }
+    },
+    {
+      "calc_key": "source_chapter_1",
+      "legacy_field": "name_value",
+      "equivalence": "same_concept_same_method",
+      "notes": "Both represent full-name numeric sum.",
+      "definition_status": "computable",
+      "aggregate_comparison": "same",
+      "sample_results": [
+        {
+          "sample_id": "sample_1",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_2",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_3",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_4",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_5",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        }
+      ],
+      "counts": {
+        "matched_samples": 5,
+        "mismatched_samples": 0,
+        "missing_samples": 0
+      }
+    },
+    {
+      "calc_key": "source_chapter_18",
+      "legacy_field": "name_value",
+      "equivalence": "same_concept_same_method",
+      "notes": "Same formula text family as full-name sum.",
+      "definition_status": "computable",
+      "aggregate_comparison": "same",
+      "sample_results": [
+        {
+          "sample_id": "sample_1",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_2",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_3",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_4",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_5",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        }
+      ],
+      "counts": {
+        "matched_samples": 5,
+        "mismatched_samples": 0,
+        "missing_samples": 0
+      }
+    },
+    {
+      "calc_key": "source_chapter_26",
+      "legacy_field": "name_value",
+      "equivalence": "same_concept_same_method",
+      "notes": "Same formula text family as full-name sum.",
+      "definition_status": "computable",
+      "aggregate_comparison": "same",
+      "sample_results": [
+        {
+          "sample_id": "sample_1",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_2",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_3",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_4",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_5",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        }
+      ],
+      "counts": {
+        "matched_samples": 5,
+        "mismatched_samples": 0,
+        "missing_samples": 0
+      }
+    },
+    {
+      "calc_key": "source_chapter_30",
+      "legacy_field": "name_value",
+      "equivalence": "same_concept_same_method",
+      "notes": "Same formula text family as full-name sum.",
+      "definition_status": "computable",
+      "aggregate_comparison": "same",
+      "sample_results": [
+        {
+          "sample_id": "sample_1",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_2",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_3",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_4",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_5",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        }
+      ],
+      "counts": {
+        "matched_samples": 5,
+        "mismatched_samples": 0,
+        "missing_samples": 0
+      }
+    },
+    {
+      "calc_key": "source_chapter_31",
+      "legacy_field": "name_value",
+      "equivalence": "same_concept_same_method",
+      "notes": "Same formula text family as full-name sum.",
+      "definition_status": "computable",
+      "aggregate_comparison": "same",
+      "sample_results": [
+        {
+          "sample_id": "sample_1",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_2",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_3",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_4",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_5",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        }
+      ],
+      "counts": {
+        "matched_samples": 5,
+        "mismatched_samples": 0,
+        "missing_samples": 0
+      }
+    },
+    {
+      "calc_key": "source_chapter_33",
+      "legacy_field": "name_value",
+      "equivalence": "same_concept_same_method",
+      "notes": "Same formula text family as full-name sum.",
+      "definition_status": "computable",
+      "aggregate_comparison": "same",
+      "sample_results": [
+        {
+          "sample_id": "sample_1",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_2",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_3",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_4",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        },
+        {
+          "sample_id": "sample_5",
+          "legacy_result": 0,
+          "definition_result": 0,
+          "comparison": "same",
+          "legacy_interpretation_available": false,
+          "definition_interpretation_available": false,
+          "interpretation_available": false,
+          "definition_runtime_status": "computed"
+        }
+      ],
+      "counts": {
+        "matched_samples": 5,
+        "mismatched_samples": 0,
+        "missing_samples": 0
+      }
+    }
+  ],
+  "summary": {
+    "total_overlapping_calculations": 9,
+    "matching_results_count": 9,
+    "mismatching_results_count": 0,
+    "computable_only_in_legacy": 0,
+    "computable_only_in_definition": 0,
+    "still_needs_review": 225,
+    "unsupported": 9,
+    "missing_interpretation_text": 30,
+    "missing_input_dependency_support": 0,
+    "could_not_map_reliably": 5
+  }
+}

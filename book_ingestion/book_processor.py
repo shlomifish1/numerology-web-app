@@ -28,15 +28,18 @@ class BookProcessor:
         text = inspection.get('text', '') or ''
         metadata = dict(inspection.get('metadata', {}))
         metadata['method'] = method
-        outline = self._extract_outline(title=title, text=text)
+        source = Path(source_path)
+        book_title = self._derive_title(source, title, metadata, text)
+        metadata['derived_title'] = book_title
+        outline = self._extract_outline(title=book_title, text=text)
         metadata['outline'] = outline
         record = {
             'corpus': corpus,
-            'title': title,
+            'title': book_title,
             'author': author,
-            'source_path': str(Path(source_path)),
-            'extension': Path(source_path).suffix.lower(),
-            'language_hint': self._language_hint(title),
+            'source_path': str(source),
+            'extension': source.suffix.lower(),
+            'language_hint': self._language_hint(book_title),
             'status': inspection.get('status', 'metadata_only'),
             'text_length': len(text),
             'excerpt': text[:500] if text else '',
@@ -51,7 +54,7 @@ class BookProcessor:
             content_text=text[:12000] if text else '',
             content_json=metadata,
         )
-        outline_text = self._format_outline(title=title, outline=outline)
+        outline_text = self._format_outline(title=book_title, outline=outline)
         if outline_text:
             self.store.save_book_artifact(
                 book_id,
@@ -105,7 +108,7 @@ class BookProcessor:
                     corpus,
                     'running',
                     progress=f'{pct}%|Indexing {index}/{max(total, 1)}: {path.name} failed',
-                )
+                    )
         self.store.sync_corpus_sources(corpus, valid_sources)
         self.store.purge_generated_records(corpus)
         if encountered_error:
@@ -153,6 +156,99 @@ class BookProcessor:
         if has_latin:
             return 'EN'
         return 'unknown'
+
+    def _derive_title(self, source_path: Path, title: str, metadata: Dict[str, object], text: str) -> str:
+        candidates: List[str] = []
+
+        def add_candidate(value: object) -> None:
+            if not isinstance(value, str):
+                return
+            candidate = re.sub(r'\s+', ' ', value).strip()
+            if candidate and candidate not in candidates:
+                candidates.append(candidate)
+
+        add_candidate(metadata.get('title'))
+        add_candidate(metadata.get('book_title'))
+        add_candidate(metadata.get('name'))
+
+        if source_path.suffix.lower() == '.json' and text:
+            try:
+                parsed = json.loads(text)
+            except Exception:
+                parsed = None
+            if isinstance(parsed, dict):
+                add_candidate(parsed.get('title'))
+                add_candidate(parsed.get('book_title'))
+                add_candidate(parsed.get('name'))
+                add_candidate(parsed.get('book_id'))
+
+        add_candidate(self._folder_title_from_source_path(source_path))
+        add_candidate(source_path.parent.name)
+        add_candidate(title)
+        add_candidate(source_path.stem)
+
+        if not candidates:
+            return title or source_path.stem or source_path.name
+
+        return max(candidates, key=lambda candidate: self._title_score(candidate, source_path))
+
+    def _folder_title_from_source_path(self, source_path: Path) -> Optional[str]:
+        current = source_path.parent
+        while current and current.parent != current:
+            name = current.name.strip()
+            if name and not self._is_generic_folder_name(name):
+                return name
+            current = current.parent
+        return None
+
+    def _is_generic_folder_name(self, name: str) -> bool:
+        normalized = re.sub(r'\s+', ' ', str(name or '')).strip().lower()
+        if not normalized:
+            return True
+        generic_terms = {
+            'chapter',
+            'chapters',
+            'part',
+            'pages',
+            'page',
+            'ocr',
+            'scan',
+            'pdf',
+            'txt',
+            'חלק',
+            'פרק',
+            'עמוד',
+            'עמודים',
+        }
+        if normalized in generic_terms:
+            return True
+        if re.fullmatch(r'^[\d\s\-–—_]+$', normalized):
+            return True
+        return False
+
+    def _title_score(self, candidate: str, source_path: Path) -> int:
+        text = re.sub(r'\s+', ' ', str(candidate or '')).strip()
+        if not text:
+            return -100
+        lower = text.lower()
+        hebrew = sum(1 for ch in text if '\u0590' <= ch <= '\u05FF')
+        latin = sum(1 for ch in text if ('A' <= ch <= 'Z') or ('a' <= ch <= 'z'))
+        digits = sum(1 for ch in text if ch.isdigit())
+        words = len(text.split())
+        score = hebrew * 4 + words * 2 - latin * 2 - digits * 2
+        if len(text) <= 4:
+            score -= 10
+        if len(text) > 80:
+            score -= 8
+        if any(token in lower for token in ('final_schema', 'strict_schema', 'normalized', 'json', 'pdf', 'scan')):
+            score -= 15
+        if source_path.parent.name and text == source_path.parent.name:
+            score += 6
+        if text == source_path.stem:
+            score -= 2
+        if any(token in text for token in ('ספר', 'נומרולוג', 'אסטרולוג')):
+            score += 8
+        return score
 
     def _should_skip(self, path: Path) -> bool:
         name = path.name.lower()

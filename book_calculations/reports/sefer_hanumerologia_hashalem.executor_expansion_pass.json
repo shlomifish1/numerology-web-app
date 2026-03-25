@@ -1,0 +1,214 @@
+{
+  "generated_at": "2026-03-25T07:04:52.503789+00:00",
+  "book_id": "sefer_hanumerologia_hashalem",
+  "before": {
+    "computable": 69,
+    "unsupported_executor_type": 191
+  },
+  "after": {
+    "computable": 87,
+    "unsupported_executor_type": 162
+  },
+  "ranked_executor_types": [
+    {
+      "executor_type": "misc_formula_executor",
+      "blocked_count": 114,
+      "risk": "high",
+      "uses_current_inputs": false,
+      "deterministic": false,
+      "sample_keys": [
+        "personality_number",
+        "source_chapter_3",
+        "source_chapter_7",
+        "source_chapter_9",
+        "source_chapter_11",
+        "source_chapter_12",
+        "source_chapter_13",
+        "source_chapter_14",
+        "source_chapter_15",
+        "source_chapter_17"
+      ]
+    },
+    {
+      "executor_type": "external_identifier_digit_reduction",
+      "blocked_count": 16,
+      "risk": "medium",
+      "uses_current_inputs": false,
+      "deterministic": true,
+      "sample_keys": [
+        "apartment_number_meaning",
+        "birth_number_meaning_1",
+        "birth_number_meaning_2",
+        "birth_number_meaning_3",
+        "birth_number_meaning_4",
+        "birth_number_meaning_5",
+        "birth_number_meaning_6",
+        "birth_number_meaning_7",
+        "car_number_meaning",
+        "credit_card_number_meaning"
+      ]
+    },
+    {
+      "executor_type": "birth_date_life_path_composites",
+      "blocked_count": 14,
+      "risk": "low",
+      "uses_current_inputs": true,
+      "deterministic": true,
+      "sample_keys": [
+        "annual_influence",
+        "annual_influence_civil",
+        "annual_influence_value",
+        "destiny_number_calculation",
+        "life_path_number_combined",
+        "life_path_number_hebrew",
+        "life_path_number_western",
+        "semi_annual_influence",
+        "shared_life_path_number",
+        "shiyur_haim_ezrahi"
+      ]
+    },
+    {
+      "executor_type": "numeric_rule_engine",
+      "blocked_count": 13,
+      "risk": "medium",
+      "uses_current_inputs": true,
+      "deterministic": true,
+      "sample_keys": [
+        "civil_life_lesson",
+        "hidden_master_number_in_name",
+        "karma_number",
+        "life_lesson_number",
+        "life_lesson_number_civil",
+        "life_lesson_number_shared",
+        "life_lessons_calculation",
+        "master_number_handling",
+        "master_number_identification",
+        "master_number_impact"
+      ]
+    },
+    {
+      "executor_type": "period_arithmetic_sequences",
+      "blocked_count": 12,
+      "risk": "medium",
+      "uses_current_inputs": false,
+      "deterministic": true,
+      "sample_keys": [
+        "action_point_calculation",
+        "bi_monthly_division",
+        "cycle_period_years_four_squares",
+        "day_division",
+        "end_of_period_1_civil",
+        "end_of_period_1_hebrew",
+        "first_season_end_age",
+        "hourly_division",
+        "maturity_focus_date",
+        "periodic_influences"
+      ]
+    },
+    {
+      "executor_type": "name_component_sum",
+      "blocked_count": 7,
+      "risk": "low",
+      "uses_current_inputs": true,
+      "deterministic": true,
+      "sample_keys": [
+        "source_chapter_6",
+        "hitnahagut_muhcenet",
+        "hitnahagut_muhcenet_shem_hiba",
+        "hitnahagut_muhcenet_shem_lida_male",
+        "shvil_goral_shem_hiba",
+        "shvil_goral_shem_lida_male",
+        "shvil_goral_shem_prati_rishon"
+      ]
+    },
+    {
+      "executor_type": "hebrew_calendar_conversion",
+      "blocked_count": 6,
+      "risk": "high",
+      "uses_current_inputs": false,
+      "deterministic": false,
+      "sample_keys": [
+        "birth_date_hebrew",
+        "hebrew_birthdate",
+        "hebrew_life_lesson",
+        "life_lesson_number_hebrew",
+        "month_number_calculation",
+        "pisga_ishit_ivrit"
+      ]
+    },
+    {
+      "executor_type": "matrix_structure_tables",
+      "blocked_count": 5,
+      "risk": "high",
+      "uses_current_inputs": false,
+      "deterministic": false,
+      "sample_keys": [
+        "chain_five_squares_impact",
+        "cycle_analysis_hexagon",
+        "cycle_analysis_squares",
+        "inner_square_meaning",
+        "numerological_charts_geometry_life"
+      ]
+    },
+    {
+      "executor_type": "pair_compatibility",
+      "blocked_count": 2,
+      "risk": "high",
+      "uses_current_inputs": false,
+      "deterministic": false,
+      "sample_keys": [
+        "matching_partners",
+        "numerological_astrological_matching_stones_plants"
+      ]
+    },
+    {
+      "executor_type": "name_letter_position",
+      "blocked_count": 2,
+      "risk": "low",
+      "uses_current_inputs": true,
+      "deterministic": true,
+      "sample_keys": [
+        "source_chapter_5",
+        "balance_point"
+      ]
+    }
+  ],
+  "implemented_executor_types": [
+    "birth_date_life_path_composites",
+    "name_component_sum",
+    "name_letter_position"
+  ],
+  "unlocked_by_executor_type": {
+    "birth_date_life_path_composites": [
+      "annual_influence",
+      "annual_influence_civil",
+      "annual_influence_value",
+      "birth_date_summation",
+      "end_of_period_1_civil",
+      "first_season_end_age",
+      "life_path_number_western",
+      "number_of_birth",
+      "shiyur_haim_ezrahi",
+      "yearly_influence_calculation",
+      "yearly_life_path_number"
+    ],
+    "name_component_sum": [
+      "hitnahagut_muhcenet",
+      "hitnahagut_muhcenet_shem_lida_male",
+      "shvil_goral_shem_lida_male",
+      "shvil_goral_shem_prati_rishon",
+      "source_chapter_6"
+    ],
+    "name_letter_position": [
+      "balance_point",
+      "source_chapter_5"
+    ]
+  },
+  "blocked_counts_after_by_reason": {
+    "unsupported_executor_type": 162,
+    "interpretation_only": 13,
+    "missing_input_mapping": 11,
+    "missing_formula": 9,
+    "missing_result_value_table": 1
+  }
+}
