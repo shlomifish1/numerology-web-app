@@ -1,0 +1,1363 @@
+"""BookIngestionRunner: end-to-end pipeline from PDF to structured artifacts.
+
+This is the single unified runner for ingesting a new numerology book PDF and
+producing the structured JSON artifacts that the Book Lab and future calculator
+work can consume.  It NEVER modifies any artifact that belongs to the golden
+reference book ("ספר הנומרולוגיה השלם") or the live Book Lab / API.
+
+Stages executed by BookIngestionRunner.run():
+  1. Extract    – Detect native text vs OCR-needed; build full-page corpus text
+  2. Preserve   – Write {title}__source_manifest.json + {title}__source_corpus.txt
+  3. Split      – Detect structural parts/chapters → {title}__chapter_inventory.json
+  4. Candidates – Scan paragraphs for calc patterns → {title}__calc_candidates.json
+  5. Ingest DB  – Persist via BookProcessor.add_book() → numerology_books.db
+  6. Draft      – Build draft catalog entry   → {title}__draft_catalog.json
+
+Uncertainty classification labels used in output artifacts:
+  needs_review        – default True on every draft item; must be reviewed before promotion
+  interpretation_only – concept identified but no computable formula was found
+  possible_formula    – paragraph contains both digits and math symbols (review carefully)
+  numeric_reference   – paragraph contains digits but no clear formula
+  missing_formula     – calc catalog entry has no formula field populated
+  low_confidence_ocr  – raw text was empty or came from an OCR-only path
+
+Existing components reused (not re-implemented):
+  OCREngine       (book_ingestion/ocr_engine.py)         – status probe + sample extract
+  BookProcessor   (book_ingestion/book_processor.py)     – SQLite ingestion
+  KnowledgeStore  (book_ingestion/knowledge_store.py)    – DB persistence
+  _match_concepts / CONCEPT_CATALOG (book_ingestion/rule_extractor.py) – pattern matching
+  text_extractor  (ocr/text_extractor.py)                – full-page extraction (optional)
+
+CLI usage:
+  python -m NumerologyReportGenerator.book_ingestion.book_ingestion_runner \\
+      --pdf  "C:\\path\\to\\book.pdf" \\
+      --title "שם הספר" \\
+      --id   "my_book_id" \\
+      [--corpus green] \\
+      [--outdir "C:\\path\\to\\output\\dir"] \\
+      [--verbose]
+
+  Or as a script:
+  python book_ingestion_runner.py --pdf ... --title ... --id ...
+
+Golden reference book artifacts and book_lab_catalog.json are NEVER written to.
+No production switch is performed.  No UI is changed.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+# ---------------------------------------------------------------------------
+# Path bootstrap – runs before any other import so that sibling packages
+# (including ocr/) are importable regardless of how the script is invoked.
+# ---------------------------------------------------------------------------
+
+_RUNNER_FILE = Path(__file__).resolve()
+_INGESTION_DIR = _RUNNER_FILE.parent                  # .../book_ingestion/
+_NRG_DIR = _INGESTION_DIR.parent                      # .../NumerologyReportGenerator/
+_PROJECT_ROOT = _NRG_DIR.parent                       # .../ai_agents/
+_OCR_DIR = _PROJECT_ROOT / "ocr"                      # .../ai_agents/ocr/
+
+for _bootstrap_path in (_PROJECT_ROOT, _NRG_DIR, _OCR_DIR):
+    _s = str(_bootstrap_path)
+    if _s not in sys.path:
+        sys.path.insert(0, _s)
+
+# ---------------------------------------------------------------------------
+# Internal package imports (relative – works as part of the book_ingestion pkg)
+# ---------------------------------------------------------------------------
+
+from .ocr_engine import OCREngine                          # noqa: E402
+from .book_processor import BookProcessor                  # noqa: E402
+from .knowledge_store import KnowledgeStore                # noqa: E402
+from .rule_extractor import _match_concepts, CONCEPT_CATALOG  # noqa: E402
+
+# ---------------------------------------------------------------------------
+# Optional: full-page extractor from ocr/ (handles all pages, not just ≤40)
+# ocr_engine._extend_legacy_paths() has already run, so ocr/ is on sys.path.
+# ---------------------------------------------------------------------------
+
+try:
+    from text_extractor import extract_text_from_pdf as _ocr_extract_pdf  # type: ignore
+    _LEGACY_EXTRACTOR_AVAILABLE = True
+except ImportError:
+    _ocr_extract_pdf = None
+    _LEGACY_EXTRACTOR_AVAILABLE = False
+
+try:
+    import fitz  # type: ignore  (PyMuPDF)
+    _FITZ_AVAILABLE = True
+except ImportError:
+    fitz = None
+    _FITZ_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Safety constants – runner refuses to process the golden reference book
+# ---------------------------------------------------------------------------
+
+_GOLDEN_BOOK_ID = "sifur_hanumerology_hashalem"
+_GOLDEN_BOOK_TITLE = "ספר הנומרולוגיה השלם"
+
+# ---------------------------------------------------------------------------
+# Regex helpers
+# ---------------------------------------------------------------------------
+
+# Matches page boundary markers produced by both OCR layers:
+#   "--- Page 3 ---"  /  "--- Page 3 (OCR) ---"  /  "--- Page 3 (Empty) ---"
+_PAGE_MARKER_RE = re.compile(r"^---\s*Page\s*\d+", re.MULTILINE)
+
+# Candidate detection (mirrors what produced the golden __calc_candidates.json)
+_DIGIT_RE = re.compile(r"\d+")
+_MATH_SYMBOL_RE = re.compile(r"[=+\-×÷]")
+
+# Hebrew + English keywords whose presence marks a paragraph as a candidate.
+# Kept intentionally broad – false positives are better than false negatives
+# at this stage; all outputs are flagged needs_review=True.
+_KEYWORD_REASONS: tuple[str, ...] = (
+    "ביטוי", "גורל", "נשמה", "התנהגות", "שם", "מוחצנ",
+    "חיים", "זמני", "מספר", "חישוב", "משמעות", "אתגר",
+    "שנה", "פסגה", "קרמ", "מאסטר", "חסר", "עודף",
+    "שביל", "ייעוד",
+)
+
+# Structural boundary patterns
+_PART_RE = re.compile(
+    r"^(?:חלק\s+[א-ת\d]+|part\s+[ivxlcdm\d]+)",
+    re.IGNORECASE,
+)
+_CHAPTER_RE = re.compile(
+    r"^(?:פרק\s+\d+|chapter\s+\d+|section\s+\d+|נושא\s+\d+)",
+    re.IGNORECASE,
+)
+
+# ---------------------------------------------------------------------------
+# Input dependency catalog
+#
+# Each entry describes one recognisable input type that a numerology calculation
+# may require.  The "strength" field is the *default* classification when this
+# pattern is found in a paragraph:
+#   "required"  – the calculation clearly cannot proceed without this input
+#   "optional"  – the calculation may use this input but can proceed without it
+#   "ambiguous" – context is unclear; must be reviewed before classifying
+#
+# The catalog is intentionally broad: it is better to surface an ambiguous hit
+# for human review than to silently miss an input dependency.
+# ---------------------------------------------------------------------------
+
+_INPUT_TYPE_PATTERNS: List[Dict[str, Any]] = [
+    {
+        "input_type": "apartment_number",
+        "label_he": "מספר דירה",
+        "strength": "required",
+        "patterns": [
+            r"מספר\s*הדירה",
+            r"מספרי?\s*דירה",
+            r"דירה\s*מספר",
+            r"apartment\s*number",
+            r"\bapartment\b",
+        ],
+    },
+    {
+        "input_type": "house_number",
+        "label_he": "מספר בית",
+        "strength": "required",
+        "patterns": [
+            r"מספר\s*הבית",
+            r"מספרי?\s*בית",
+            r"בית\s*מספר",
+            r"house\s*number",
+        ],
+    },
+    {
+        "input_type": "floor_number",
+        "label_he": "מספר קומה",
+        "strength": "optional",
+        "patterns": [
+            r"מספר\s*קומה",
+            r"קומה\s*מספר",
+            r"קומה\b",
+            r"floor\s*number",
+        ],
+    },
+    {
+        "input_type": "street_number",
+        "label_he": "מספר רחוב",
+        "strength": "optional",
+        "patterns": [
+            r"מספרי?\s*הרחוב",
+            r"מספר\s*רחוב",
+            r"רחוב\s*\d+",
+            r"street\s*(?:address\s*)?number",
+        ],
+    },
+    {
+        "input_type": "address",
+        "label_he": "כתובת",
+        "strength": "optional",
+        "patterns": [
+            r"\bכתובת\b",
+            r"\baddress\b",
+        ],
+    },
+    {
+        "input_type": "current_year",
+        "label_he": "שנה נוכחית",
+        "strength": "optional",
+        "patterns": [
+            r"השנה\s*הנוכחית",
+            r"שנה\s*נוכחית",
+            r"שנה\s*הנוכחית",
+            r"current\s*year",
+        ],
+    },
+    {
+        "input_type": "full_name",
+        "label_he": "שם מלא",
+        "strength": "optional",
+        "patterns": [
+            r"שם\s*מלא",
+            r"full\s*name",
+        ],
+    },
+    {
+        "input_type": "first_name",
+        "label_he": "שם פרטי",
+        "strength": "optional",
+        "patterns": [
+            r"שם\s*פרטי",
+            r"first\s*name",
+        ],
+    },
+    {
+        "input_type": "last_name",
+        "label_he": "שם משפחה",
+        "strength": "optional",
+        "patterns": [
+            r"שם\s*משפחה",
+            r"last\s*name",
+            r"family\s*name",
+        ],
+    },
+    {
+        "input_type": "birth_date",
+        "label_he": "תאריך לידה",
+        "strength": "ambiguous",
+        "patterns": [
+            r"תאריך\s*לידה",
+            r"מפ[את]\s*(?:ה)?לידה",
+            r"מפ[את]\s*(?:ה)?נומרולוגי",
+            r"birth\s*date",
+        ],
+    },
+    {
+        "input_type": "birth_day",
+        "label_he": "יום לידה",
+        "strength": "optional",
+        "patterns": [
+            r"יום\s*לידה",
+            r"birth\s*day",
+        ],
+    },
+    {
+        "input_type": "birth_year",
+        "label_he": "שנת לידה",
+        "strength": "optional",
+        "patterns": [
+            r"שנת\s*לידה",
+            r"birth\s*year",
+        ],
+    },
+    {
+        "input_type": "mother_name",
+        "label_he": "שם האם",
+        "strength": "ambiguous",
+        "patterns": [
+            r"שם\s*האם",
+            r"שם\s*אמא",
+            r"mother.?s?\s*name",
+        ],
+    },
+    {
+        "input_type": "father_name",
+        "label_he": "שם האב",
+        "strength": "ambiguous",
+        "patterns": [
+            r"שם\s*האב",
+            r"שם\s*אבא",
+            r"father.?s?\s*name",
+        ],
+    },
+    {
+        "input_type": "marriage_name",
+        "label_he": "שם נישואין",
+        "strength": "ambiguous",
+        "patterns": [
+            r"שם\s*נישואין",
+            r"שם\s*לאחר\s*נישואין",
+            r"marriage\s*name",
+        ],
+    },
+    {
+        "input_type": "id_number",
+        "label_he": "מספר תעודת זהות",
+        "strength": "optional",
+        "patterns": [
+            r"תעודת\s*זהות",
+            r"מספר\s*זיהוי",
+            r"id\s*number",
+            r"ת\.?ז\.?",
+        ],
+    },
+    {
+        "input_type": "passport_number",
+        "label_he": "מספר דרכון",
+        "strength": "optional",
+        "patterns": [
+            r"מספר\s*דרכון",
+            r"passport\s*number",
+        ],
+    },
+    {
+        "input_type": "car_number",
+        "label_he": "מספר רכב",
+        "strength": "optional",
+        "patterns": [
+            r"מספר\s*רכב",
+            r"לוחית\s*רישוי",
+            r"car\s*(?:plate\s*)?number",
+            r"license\s*plate",
+        ],
+    },
+    {
+        "input_type": "city_name",
+        "label_he": "שם עיר",
+        "strength": "optional",
+        "patterns": [
+            r"שם\s*(?:ה)?עיר",
+            r"city\s*name",
+        ],
+    },
+    {
+        "input_type": "other_numeric_identifier",
+        "label_he": "מזהה מספרי אחר",
+        "strength": "ambiguous",
+        "patterns": [
+            r"מספר\s*מזהה",
+            r"other\s*(?:numeric\s*)?identifier",
+        ],
+    },
+]
+
+
+def _detect_input_dependencies(text: str) -> Dict[str, Any]:
+    """Scan a paragraph for input dependency signals.
+
+    Checks every entry in _INPUT_TYPE_PATTERNS against the paragraph text.
+    Returns a dict with required/optional/ambiguous lists, matched source
+    terms, and overall ambiguity flag.
+
+    The "confidence" within each input_type_hint is:
+      "confident" – the exact term was matched in this paragraph
+      "ambiguous" – the pattern is inherently ambiguous per catalog definition
+
+    All outputs carry needs_review=True because this is a draft pipeline stage.
+    Source wording is preserved verbatim in "source_term" so reviewers can
+    trace the evidence back to the original text.
+    """
+    required_inputs: List[str] = []
+    optional_inputs: List[str] = []
+    ambiguous_inputs: List[str] = []
+    hints: Dict[str, Dict[str, Any]] = {}
+
+    for defn in _INPUT_TYPE_PATTERNS:
+        input_type: str = defn["input_type"]
+        declared_strength: str = defn["strength"]
+        label_he: str = defn["label_he"]
+
+        matched_term: Optional[str] = None
+        for pattern in defn["patterns"]:
+            m = re.search(pattern, text, re.IGNORECASE)
+            if m:
+                matched_term = m.group(0)
+                break
+
+        if matched_term is None:
+            continue
+
+        # Confidence: "ambiguous" if catalog marks it so, else "confident"
+        confidence = "ambiguous" if declared_strength == "ambiguous" else "confident"
+
+        hints[input_type] = {
+            "confidence": confidence,
+            "label_he": label_he,
+            "source_term": matched_term,        # exact matched wording preserved
+            "declared_strength": declared_strength,
+        }
+
+        if declared_strength == "required":
+            if input_type not in required_inputs:
+                required_inputs.append(input_type)
+        elif declared_strength == "optional":
+            if input_type not in optional_inputs:
+                optional_inputs.append(input_type)
+        else:  # "ambiguous"
+            if input_type not in ambiguous_inputs:
+                ambiguous_inputs.append(input_type)
+
+    nothing_found = not required_inputs and not optional_inputs and not ambiguous_inputs
+    return {
+        "required_inputs": required_inputs,
+        "optional_inputs": optional_inputs,
+        "ambiguous_inputs": ambiguous_inputs,
+        "input_type_hints": hints,
+        # True when no recognized input signal was found at all
+        "ambiguous_input_dependency": nothing_found or bool(
+            ambiguous_inputs and not required_inputs and not optional_inputs
+        ),
+        "needs_review": True,
+    }
+
+
+def _aggregate_input_deps(
+    evidence_list: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Aggregate input dependency dicts from multiple candidate paragraphs.
+
+    An input_type graduates to "required" if it was required in any evidence item.
+    It becomes "optional" if it was optional in some but never required.
+    It stays "ambiguous" if only ambiguous evidence exists.
+
+    Returns a consolidated input dependency dict suitable for a catalog entry.
+    """
+    required_counter: Dict[str, int] = {}
+    optional_counter: Dict[str, int] = {}
+    ambiguous_counter: Dict[str, int] = {}
+    all_hints: Dict[str, Dict[str, Any]] = {}
+
+    for ev in evidence_list:
+        deps: Dict[str, Any] = ev.get("input_dependencies") or {}
+        for it in deps.get("required_inputs") or []:
+            required_counter[it] = required_counter.get(it, 0) + 1
+        for it in deps.get("optional_inputs") or []:
+            optional_counter[it] = optional_counter.get(it, 0) + 1
+        for it in deps.get("ambiguous_inputs") or []:
+            ambiguous_counter[it] = ambiguous_counter.get(it, 0) + 1
+        for it, hint in (deps.get("input_type_hints") or {}).items():
+            if it not in all_hints:
+                all_hints[it] = dict(hint)
+            # Escalate if a later item has a stronger signal
+            existing = all_hints[it]
+            if existing.get("declared_strength") == "ambiguous" and hint.get("declared_strength") != "ambiguous":
+                all_hints[it] = dict(hint)
+
+    # Promote: required > optional > ambiguous
+    required = sorted(required_counter)
+    optional = sorted(it for it in optional_counter if it not in required_counter)
+    ambiguous = sorted(
+        it for it in ambiguous_counter
+        if it not in required_counter and it not in optional_counter
+    )
+
+    all_known = set(required) | set(optional) | set(ambiguous)
+
+    if required:
+        overall = "confident"
+    elif optional:
+        overall = "probable"
+    else:
+        overall = "ambiguous_input_dependency"
+
+    return {
+        "required_inputs": required,
+        "optional_inputs": optional,
+        "ambiguous_inputs": ambiguous,
+        "input_type_hints": {k: v for k, v in all_hints.items() if k in all_known},
+        "input_dependency_confidence": overall,
+        "ambiguous_input_dependency": not required and not optional,
+        "needs_review": True,
+    }
+
+
+# ---------------------------------------------------------------------------
+# I/O helpers
+# ---------------------------------------------------------------------------
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _write_json(path: Path, payload: Any, *, indent: int = 4) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=indent),
+        encoding="utf-8",
+    )
+    logger.info("Wrote %-50s (%d bytes)", path.name, path.stat().st_size)
+
+
+def _write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    logger.info("Wrote %-50s (%d bytes)", path.name, path.stat().st_size)
+
+
+# ---------------------------------------------------------------------------
+# Stage 1 helpers: full-page PDF extraction
+# ---------------------------------------------------------------------------
+
+def _extract_full_pdf_text(
+    pdf_path: Path,
+    engine: OCREngine,
+) -> Tuple[str, Dict[str, Any]]:
+    """Extract complete page-by-page text from a PDF, preserving page markers.
+
+    Strategy priority:
+      1. fitz native-text (all pages)  – preferred for text-native PDFs
+      2. ocr/text_extractor            – handles mixed/scanned PDFs, all pages
+      3. ocr_engine.inspect() sample   – fallback, ≤40 pages
+
+    Page boundaries are always preserved as '--- Page N ---' markers so that
+    rule_extractor._find_page_hint() and the structural split work correctly.
+
+    Returns (raw_text, extraction_metadata_dict).
+    """
+    meta: Dict[str, Any] = {
+        "strategy": "unknown",
+        "total_pages": 0,
+        "pages_extracted": 0,
+        "ocr_needed_pages": 0,
+    }
+
+    # ------------------------------------------------------------------
+    # Strategy 1: fitz native text (all pages, fast, preserves layout)
+    # ------------------------------------------------------------------
+    if _FITZ_AVAILABLE and fitz is not None:
+        try:
+            doc = fitz.open(str(pdf_path))
+            total = len(doc)
+            meta["total_pages"] = total
+            parts: List[str] = []
+            ocr_empty = 0
+            for idx, page in enumerate(doc, start=1):
+                try:
+                    page_text = page.get_text("text") or ""
+                except Exception:
+                    page_text = ""
+                if page_text.strip():
+                    parts.append(f"--- Page {idx} ---\n{page_text.strip()}")
+                    meta["pages_extracted"] += 1
+                else:
+                    parts.append(f"--- Page {idx} (Empty) ---")
+                    ocr_empty += 1
+            joined = "\n".join(parts)
+            meta["ocr_needed_pages"] = ocr_empty
+            # Accept if we got meaningful text from at least some pages
+            meaningful = len(
+                re.sub(r"---\s*Page\s*\d+[^\n]*---", "", joined).strip()
+            )
+            if meaningful >= engine.MIN_TEXT_CHARS * 3:
+                meta["strategy"] = "fitz-native-full"
+                return joined, meta
+            logger.debug(
+                "fitz native text too sparse (%d chars) – trying next strategy",
+                meaningful,
+            )
+        except Exception as exc:
+            logger.warning("fitz full-page extraction failed: %s", exc)
+            meta["fitz_error"] = str(exc)
+
+    # ------------------------------------------------------------------
+    # Strategy 2: ocr/text_extractor (all pages, handles scanned PDFs)
+    # ------------------------------------------------------------------
+    if _LEGACY_EXTRACTOR_AVAILABLE and _ocr_extract_pdf is not None:
+        try:
+            legacy_text = _ocr_extract_pdf(
+                str(pdf_path), lang="heb+eng", force_ocr=False
+            )
+            if legacy_text and len(legacy_text.strip()) >= engine.MIN_TEXT_CHARS:
+                page_count = len(_PAGE_MARKER_RE.findall(legacy_text))
+                meta["strategy"] = "legacy-text-extractor-full"
+                meta["total_pages"] = page_count
+                meta["pages_extracted"] = page_count
+                return legacy_text, meta
+        except Exception as exc:
+            logger.warning("ocr/text_extractor full extraction failed: %s", exc)
+            meta["legacy_error"] = str(exc)
+
+    # ------------------------------------------------------------------
+    # Strategy 3: ocr_engine.inspect() sample (≤40 pages, always available)
+    # ------------------------------------------------------------------
+    logger.warning(
+        "Full-page extraction unavailable – falling back to ocr_engine sample (≤40 pages)"
+    )
+    result = engine.inspect(str(pdf_path))
+    sample_text = str(result.get("text") or "")
+    engine_meta = dict(result.get("metadata") or {})
+    meta["strategy"] = f"ocr_engine_sample:{result.get('status', 'unknown')}"
+    meta["pages_extracted"] = engine_meta.get("pages_sampled", 0)
+    meta["total_pages"] = engine_meta.get("pages_sampled", 0)
+    meta["extraction_quality"] = "low_confidence_ocr" if not sample_text.strip() else "sample_only"
+    meta.update({k: v for k, v in engine_meta.items() if k not in meta})
+    return sample_text, meta
+
+
+# ---------------------------------------------------------------------------
+# Stage 3 helper: structural split
+# ---------------------------------------------------------------------------
+
+def _calc_like_count(paragraphs: List[str]) -> int:
+    """Count paragraphs that contain digits or numerology keywords."""
+    count = 0
+    for p in paragraphs:
+        if _DIGIT_RE.search(p) or any(kw in p for kw in _KEYWORD_REASONS):
+            count += 1
+    return count
+
+
+def _safe_filename(name: str) -> str:
+    """Strip characters invalid in Windows file names."""
+    return re.sub(r'[\\/:*?"<>|]', "_", (name or "").strip())
+
+
+def _split_into_sections(
+    raw_text: str,
+    book_id: str,
+) -> List[Dict[str, Any]]:
+    """Detect structural boundaries and return chapter-inventory-shaped records.
+
+    Each record matches the existing __chapter_inventory.json schema:
+      relative_path, directory, file_name, length_bytes, line_count,
+      word_count, paragraph_count, calc_like_paragraphs
+
+    An extra field "extraction_note" is added to signal auto-detection.
+
+    Boundaries detected from:
+      - Hebrew part headings (חלק א/ב/ג...)
+      - Hebrew/English chapter headings (פרק N / chapter N / section N)
+      - If no boundaries found → entire text becomes one section
+    """
+    lines = raw_text.splitlines()
+    sections: List[Dict[str, Any]] = []
+
+    current_part = "main"
+    current_chapter_name: Optional[str] = None
+    current_lines: List[str] = []
+    section_index = 0
+
+    def _flush(part: str, name: Optional[str], block: List[str], idx: int) -> None:
+        text_block = "\n".join(block).strip()
+        if not text_block:
+            return
+        paragraphs = [p.strip() for p in re.split(r"\n[ \t]*\n", text_block) if p.strip()]
+        display = name or f"section_{idx + 1}"
+        fname = _safe_filename(display) + ".txt"
+        rel = f"{part}\\{fname}"
+        sections.append({
+            "relative_path": rel,
+            "directory": part,
+            "file_name": fname,
+            "length_bytes": len(text_block.encode("utf-8")),
+            "line_count": len(block),
+            "word_count": len(text_block.split()),
+            "paragraph_count": len(paragraphs),
+            "calc_like_paragraphs": _calc_like_count(paragraphs),
+            "extraction_note": "auto_detected_boundary",
+        })
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Part boundary (e.g. "חלק ב", "Part II")
+        if _PART_RE.match(stripped) and len(stripped) <= 60:
+            _flush(current_part, current_chapter_name, current_lines, section_index)
+            section_index += 1
+            current_part = _safe_filename(stripped) or f"part_{section_index}"
+            current_chapter_name = stripped
+            current_lines = []
+            continue
+
+        # Chapter boundary (e.g. "פרק 5", "Chapter 3")
+        if _CHAPTER_RE.match(stripped) and len(stripped) <= 80:
+            _flush(current_part, current_chapter_name, current_lines, section_index)
+            section_index += 1
+            current_chapter_name = stripped
+            current_lines = []
+            continue
+
+        current_lines.append(line)
+
+    # Flush the final section
+    _flush(current_part, current_chapter_name, current_lines, section_index)
+
+    # If no structural boundaries were found, treat the whole text as one section
+    if not sections:
+        all_paras = [p.strip() for p in re.split(r"\n[ \t]*\n", raw_text) if p.strip()]
+        sections.append({
+            "relative_path": f"main\\{book_id}.txt",
+            "directory": "main",
+            "file_name": f"{book_id}.txt",
+            "length_bytes": len(raw_text.encode("utf-8")),
+            "line_count": len(lines),
+            "word_count": len(raw_text.split()),
+            "paragraph_count": len(all_paras),
+            "calc_like_paragraphs": _calc_like_count(all_paras),
+            "extraction_note": "no_structural_boundaries_detected",
+        })
+
+    return sections
+
+
+# ---------------------------------------------------------------------------
+# Stage 4 helper: candidate extraction
+# ---------------------------------------------------------------------------
+
+def _extract_candidates(
+    raw_text: str,
+    sections: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Scan paragraphs for calculation/interpretation candidates.
+
+    Output schema matches existing __calc_candidates.json:
+      relative_path, paragraph_index, reasons, text, char_count
+
+    Extra honest-classification fields added (do not break existing readers):
+      needs_review      – always True in draft stage
+      extraction_quality – interpretation_only | possible_formula | numeric_reference
+
+    paragraph_index is 1-based within each relative_path section,
+    matching the golden reference schema convention.
+    """
+    section_relpaths = [s["relative_path"] for s in sections]
+    default_relpath = section_relpaths[0] if section_relpaths else "main\\body.txt"
+
+    # Re-scan raw_text with the same boundary logic so paragraph-to-section
+    # mapping is consistent with what _split_into_sections produced.
+    section_blocks: List[Tuple[str, List[str]]] = []  # (relative_path, lines)
+    current_lines: List[str] = []
+    section_idx = 0
+
+    for line in raw_text.splitlines():
+        stripped = line.strip()
+        is_boundary = (
+            section_idx + 1 < len(section_relpaths)
+            and (_PART_RE.match(stripped) or _CHAPTER_RE.match(stripped))
+            and len(stripped) <= 80
+        )
+        if is_boundary:
+            rel = section_relpaths[section_idx] if section_idx < len(section_relpaths) else default_relpath
+            section_blocks.append((rel, current_lines[:]))
+            section_idx += 1
+            current_lines = []
+        else:
+            current_lines.append(line)
+
+    # Final block
+    rel = section_relpaths[section_idx] if section_idx < len(section_relpaths) else default_relpath
+    section_blocks.append((rel, current_lines))
+
+    # Scan each section's paragraphs
+    candidates: List[Dict[str, Any]] = []
+
+    for rel_path, block_lines in section_blocks:
+        block_text = "\n".join(block_lines)
+        paragraphs = [p.strip() for p in re.split(r"\n[ \t]*\n", block_text) if p.strip()]
+
+        for para_idx, para in enumerate(paragraphs, start=1):
+            reasons: List[str] = []
+
+            if _DIGIT_RE.search(para):
+                reasons.append("digits")
+            if _MATH_SYMBOL_RE.search(para):
+                reasons.append("math-symbols")
+            for kw in _KEYWORD_REASONS:
+                if kw in para:
+                    reasons.append(kw)
+
+            if not reasons:
+                continue
+
+            # Honest classification of extraction confidence
+            has_digits = _DIGIT_RE.search(para) is not None
+            has_math = _MATH_SYMBOL_RE.search(para) is not None
+            if has_digits and has_math:
+                extraction_quality = "possible_formula"
+            elif has_digits:
+                extraction_quality = "numeric_reference"
+            else:
+                extraction_quality = "interpretation_only"
+
+            candidates.append({
+                "relative_path": rel_path,
+                "paragraph_index": para_idx,
+                "reasons": reasons,
+                "text": para,
+                "char_count": len(para),
+                # Honest uncertainty classification fields
+                "needs_review": True,
+                "extraction_quality": extraction_quality,
+                # Input dependency detection (see _INPUT_TYPE_PATTERNS catalog)
+                "input_dependencies": _detect_input_dependencies(para),
+            })
+
+    return candidates
+
+
+# ---------------------------------------------------------------------------
+# Stage 6 helper: draft catalog
+# ---------------------------------------------------------------------------
+
+def _build_draft_catalog(
+    book_title: str,
+    book_id: str,
+    sections: List[Dict[str, Any]],
+    candidates: List[Dict[str, Any]],
+    extraction_meta: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Build a draft catalog shaped like book_lab_catalog.json.
+
+    All calc entries carry needs_review=True, missing_formula=True, and
+    empty formula/result-value fields so nothing is accidentally treated as
+    computable.
+
+    The top-level "status": "draft_needs_review" and "_warning" field ensure
+    the live Book Lab API (which reads book_lab_catalog.json, a different file)
+    cannot accidentally load this artifact.
+    """
+    # Aggregate concept hits across all candidate paragraphs.
+    # Also carry the per-candidate input_dependencies forward so _aggregate_input_deps
+    # can consolidate them per concept.
+    concept_evidence: Dict[str, List[Dict[str, Any]]] = {}
+    for cand in candidates:
+        matched = _match_concepts(str(cand.get("text") or ""))
+        for concept_key, snippets in matched.items():
+            concept_evidence.setdefault(concept_key, [])
+            for snippet in snippets:
+                concept_evidence[concept_key].append({
+                    "text": snippet,
+                    "relative_path": cand.get("relative_path", ""),
+                    "paragraph_index": cand.get("paragraph_index", 0),
+                    "extraction_quality": cand.get("extraction_quality", "interpretation_only"),
+                    # Carry raw per-paragraph input dependency data through for aggregation
+                    "input_dependencies": cand.get("input_dependencies", {}),
+                })
+
+    draft_calculations: List[Dict[str, Any]] = []
+    for concept_key in sorted(concept_evidence):
+        evidence_list = concept_evidence[concept_key]
+        concept_meta = next(
+            (c for c in CONCEPT_CATALOG if c["key"] == concept_key), None
+        )
+        label_he = str(concept_meta["label"]) if concept_meta else concept_key
+        # Confidence grows with evidence count but is capped low (drafts are uncertain)
+        confidence = round(min(0.75, 0.25 + 0.04 * min(len(evidence_list), 12)), 3)
+        chapter_ref = evidence_list[0].get("relative_path", "") if evidence_list else ""
+        source_excerpt = evidence_list[0].get("text", "")[:400] if evidence_list else ""
+        source_refs = list(dict.fromkeys(
+            e.get("relative_path", "") for e in evidence_list[:6]
+            if e.get("relative_path")
+        ))
+
+        # Aggregate input dependencies across all evidence for this concept
+        input_deps = _aggregate_input_deps(evidence_list)
+
+        draft_calculations.append({
+            "calc_key": concept_key,
+            "label_he": label_he,
+            "short_explanation": f"טיוטה: {label_he} — דורש בדיקה ידנית",
+            # Formula fields intentionally empty – must be filled by human review
+            "formula_text": "",
+            "formula_steps": [],
+            # ── Input dependency fields ────────────────────────────────────
+            # input_dependencies: flat list of all known inputs (required + optional)
+            # for compatibility with existing catalog consumers that read this field.
+            "input_dependencies": input_deps["required_inputs"] + input_deps["optional_inputs"],
+            # Structured breakdown so reviewers can answer:
+            #   - what does this calc need?      → required_inputs
+            #   - what can it optionally use?    → optional_inputs
+            #   - what is unclear?               → ambiguous_inputs
+            #   - how confident is the evidence? → input_dependency_confidence
+            "required_inputs": input_deps["required_inputs"],
+            "optional_inputs": input_deps["optional_inputs"],
+            "ambiguous_inputs": input_deps["ambiguous_inputs"],
+            "input_type_hints": input_deps["input_type_hints"],
+            "input_dependency_confidence": input_deps["input_dependency_confidence"],
+            "ambiguous_input_dependency": input_deps["ambiguous_input_dependency"],
+            # ──────────────────────────────────────────────────────────────
+            "allowed_result_values": list(range(1, 10)) + [11, 22, 33],
+            "result_values": [],          # empty: do not fake computable results
+            "chapter_ref": chapter_ref,
+            "book_name": book_title,
+            "source_refs": source_refs,
+            "source_excerpt": source_excerpt,
+            "enabled_in_full_map": False,  # explicitly disabled
+            # Uncertainty / honest classification
+            "needs_review": True,
+            "extraction_quality": "interpretation_only",
+            "missing_formula": True,
+            "confidence": confidence,
+            "evidence_count": len(evidence_list),
+        })
+
+    chapter_summary = [
+        {
+            "relative_path": s.get("relative_path", ""),
+            "file_name": s.get("file_name", ""),
+            "word_count": s.get("word_count", 0),
+            "calc_like_paragraphs": s.get("calc_like_paragraphs", 0),
+        }
+        for s in sections
+    ]
+
+    return {
+        "book_id": book_id,
+        "book_name": book_title,
+        "status": "draft_needs_review",
+        "generated_at": _now_iso(),
+        "generated_by": "BookIngestionRunner",
+        "extraction_metadata": extraction_meta,
+        "chapter_summary": chapter_summary,
+        "calculations": draft_calculations,
+        "_warning": (
+            "DRAFT ARTIFACT – produced by BookIngestionRunner. "
+            "This file is NOT book_lab_catalog.json and does NOT affect the "
+            "live Book Lab API or any existing calculator. "
+            "All 'calculations' entries have needs_review=True and "
+            "empty formula/result_values fields. "
+            "Manual review is required before any Book Lab integration."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Main runner class
+# ---------------------------------------------------------------------------
+
+class BookIngestionRunner:
+    """Unified end-to-end runner: PDF → structured Book Lab artifacts.
+
+    Executes six sequential stages and writes all artifacts to `output_dir`.
+    Never modifies any artifact belonging to the golden reference book or the
+    live Book Lab / API production files.
+
+    Args:
+        book_title: Full display title (used in artifact filenames).
+        book_id:    Machine-readable identifier (e.g. ``'my_new_book_2025'``).
+        pdf_path:   Path to the source PDF.
+        output_dir: Where artifacts are written.  Defaults to
+                    ``interpretations/{book_title}/`` inside NumerologyReportGenerator.
+        corpus:     Corpus label for SQLite ingestion (default ``'green'``).
+
+    Raises:
+        ValueError: If ``book_id`` or ``book_title`` matches the golden reference.
+        FileNotFoundError: If ``pdf_path`` does not exist.
+    """
+
+    def __init__(
+        self,
+        book_title: str,
+        book_id: str,
+        pdf_path: str,
+        output_dir: Optional[str] = None,
+        corpus: str = "green",
+    ) -> None:
+        # ── Safety guards ──────────────────────────────────────────────────
+        if book_id.strip() == _GOLDEN_BOOK_ID:
+            raise ValueError(
+                f"BookIngestionRunner refuses to process the golden reference book "
+                f"(book_id={_GOLDEN_BOOK_ID!r}).  Choose a different book_id."
+            )
+        if book_title.strip() == _GOLDEN_BOOK_TITLE:
+            raise ValueError(
+                f"BookIngestionRunner refuses to process the golden reference book "
+                f"(title={_GOLDEN_BOOK_TITLE!r}).  Choose a different title."
+            )
+
+        self.book_title = book_title.strip()
+        self.book_id = book_id.strip()
+        self.corpus = corpus.strip() or "green"
+
+        self.pdf_path = Path(pdf_path).resolve()
+        if not self.pdf_path.exists():
+            raise FileNotFoundError(f"PDF not found: {self.pdf_path}")
+
+        # ── Output directory ───────────────────────────────────────────────
+        if output_dir:
+            self.output_dir = Path(output_dir).resolve()
+        else:
+            self.output_dir = _NRG_DIR / "interpretations" / self.book_title
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+
+        # ── Artifact paths (follow existing __artifact naming convention) ──
+        _t = self.book_title
+        self._manifest_path = self.output_dir / f"{_t}__source_manifest.json"
+        self._corpus_path = self.output_dir / f"{_t}__source_corpus.txt"
+        self._inventory_path = self.output_dir / f"{_t}__chapter_inventory.json"
+        self._candidates_path = self.output_dir / f"{_t}__calc_candidates.json"
+        self._draft_catalog_path = self.output_dir / f"{_t}__draft_catalog.json"
+
+        # ── Reused existing components ─────────────────────────────────────
+        self._engine = OCREngine(language="heb+eng")
+        self._store = KnowledgeStore()
+        self._processor = BookProcessor(store=self._store, engine=self._engine)
+
+        self._run_log: List[Dict[str, Any]] = []
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Stage 1 – Extract
+    # ──────────────────────────────────────────────────────────────────────
+
+    def stage_1_extract(self) -> Tuple[str, Dict[str, Any], str]:
+        """Detect native text vs OCR-needed; build full-page corpus text.
+
+        Uses OCREngine.inspect() as a quick status probe (≤40-page sample),
+        then calls _extract_full_pdf_text() for the complete corpus.
+
+        Returns:
+            (raw_text, extraction_meta, probe_status)
+        """
+        logger.info("[Stage 1] Inspecting %s", self.pdf_path.name)
+
+        # Quick probe via existing OCREngine (reused component)
+        probe = self._engine.inspect(str(self.pdf_path))
+        probe_status = str(probe.get("status") or "unknown")
+        logger.info("[Stage 1] OCREngine probe → status=%s", probe_status)
+
+        # Full corpus extraction (all pages)
+        raw_text, extract_meta = _extract_full_pdf_text(self.pdf_path, self._engine)
+
+        extraction_meta: Dict[str, Any] = {
+            "source_path": str(self.pdf_path),
+            "file_name": self.pdf_path.name,
+            "file_size_bytes": self.pdf_path.stat().st_size,
+            "probe_status": probe_status,
+            "extraction_strategy": extract_meta.get("strategy", "unknown"),
+            "total_pages": extract_meta.get("total_pages", 0),
+            "pages_extracted": extract_meta.get("pages_extracted", 0),
+            "ocr_needed_pages": extract_meta.get("ocr_needed_pages", 0),
+            "raw_text_length": len(raw_text),
+            "page_markers_found": len(_PAGE_MARKER_RE.findall(raw_text)),
+            "language": self._engine.language,
+            "ocr_capabilities": self._engine.capabilities(),
+        }
+        if extract_meta.get("extraction_quality"):
+            extraction_meta["extraction_quality"] = extract_meta["extraction_quality"]
+        if not raw_text.strip():
+            logger.warning(
+                "[Stage 1] No text extracted – extraction_quality=low_confidence_ocr"
+            )
+            extraction_meta["extraction_quality"] = "low_confidence_ocr"
+
+        self._log_stage("stage_1_extract", {
+            "probe_status": probe_status,
+            "strategy": extraction_meta["extraction_strategy"],
+            "total_pages": extraction_meta["total_pages"],
+            "raw_text_length": extraction_meta["raw_text_length"],
+        })
+        return raw_text, extraction_meta, probe_status
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Stage 2 – Preserve raw/source outputs
+    # ──────────────────────────────────────────────────────────────────────
+
+    def stage_2_preserve_raw(
+        self,
+        raw_text: str,
+        extraction_meta: Dict[str, Any],
+    ) -> None:
+        """Write __source_manifest.json and __source_corpus.txt.
+
+        The source corpus preserves all page markers exactly as produced by
+        the extractor, so downstream rule_extractor._find_page_hint() works.
+        """
+        logger.info("[Stage 2] Preserving raw source artifacts")
+
+        manifest = {
+            "book_id": self.book_id,
+            "book_title": self.book_title,
+            "generated_at": _now_iso(),
+            "generated_by": "BookIngestionRunner",
+            "source_file": str(self.pdf_path),
+            "extraction_metadata": extraction_meta,
+            "artifacts": {
+                "source_corpus": self._corpus_path.name,
+                "chapter_inventory": self._inventory_path.name,
+                "calc_candidates": self._candidates_path.name,
+                "draft_catalog": self._draft_catalog_path.name,
+            },
+            "_note": (
+                "Auto-generated by BookIngestionRunner.  All artifacts are drafts "
+                "requiring manual review before any Book Lab integration."
+            ),
+        }
+        _write_json(self._manifest_path, manifest)
+        _write_text(self._corpus_path, raw_text)
+
+        self._log_stage("stage_2_preserve_raw", {
+            "manifest": str(self._manifest_path),
+            "corpus": str(self._corpus_path),
+        })
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Stage 3 – Structural split
+    # ──────────────────────────────────────────────────────────────────────
+
+    def stage_3_structural_split(
+        self,
+        raw_text: str,
+    ) -> List[Dict[str, Any]]:
+        """Detect parts/chapters/sections → write __chapter_inventory.json."""
+        logger.info("[Stage 3] Structural split")
+
+        sections = _split_into_sections(raw_text, self.book_id)
+        _write_json(self._inventory_path, sections)
+
+        logger.info("[Stage 3] Detected %d section(s)", len(sections))
+        self._log_stage("stage_3_structural_split", {"sections_found": len(sections)})
+        return sections
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Stage 4 – Candidate extraction
+    # ──────────────────────────────────────────────────────────────────────
+
+    def stage_4_extract_candidates(
+        self,
+        raw_text: str,
+        sections: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Scan paragraphs for calc/interpretation candidates → __calc_candidates.json."""
+        logger.info("[Stage 4] Extracting candidates")
+
+        candidates = _extract_candidates(raw_text, sections)
+        _write_json(self._candidates_path, candidates)
+
+        logger.info("[Stage 4] %d candidate(s) extracted", len(candidates))
+        self._log_stage("stage_4_extract_candidates", {"candidates_found": len(candidates)})
+        return candidates
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Stage 5 – SQLite ingestion (reuses BookProcessor)
+    # ──────────────────────────────────────────────────────────────────────
+
+    def stage_5_ingest_db(self) -> Dict[str, Any]:
+        """Persist book metadata and chunks in numerology_books.db.
+
+        Calls the existing BookProcessor.add_book() (reused component).
+        This does NOT affect the golden reference book's DB records.
+        """
+        logger.info("[Stage 5] SQLite ingestion via BookProcessor")
+
+        result = self._processor.add_book(
+            title=self.book_title,
+            author="",
+            source_path=str(self.pdf_path),
+            corpus=self.corpus,
+            method="book_ingestion_runner",
+        )
+        sqlite_book_id = result.get("book_id")
+        logger.info("[Stage 5] SQLite book_id=%s", sqlite_book_id)
+        self._log_stage("stage_5_ingest_db", {"sqlite_book_id": sqlite_book_id})
+        return result
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Stage 6 – Draft catalog
+    # ──────────────────────────────────────────────────────────────────────
+
+    def stage_6_draft_catalog(
+        self,
+        sections: List[Dict[str, Any]],
+        candidates: List[Dict[str, Any]],
+        extraction_meta: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Build draft catalog entry → {title}__draft_catalog.json.
+
+        Named deliberately *__draft_catalog.json* (not book_lab_catalog.json)
+        to prevent accidental loading by the live Book Lab API.
+        """
+        logger.info("[Stage 6] Building draft catalog")
+
+        draft = _build_draft_catalog(
+            book_title=self.book_title,
+            book_id=self.book_id,
+            sections=sections,
+            candidates=candidates,
+            extraction_meta=extraction_meta,
+        )
+        _write_json(self._draft_catalog_path, draft)
+
+        calc_count = len(draft.get("calculations") or [])
+        logger.info("[Stage 6] Draft catalog: %d candidate calculation(s)", calc_count)
+        self._log_stage("stage_6_draft_catalog", {"draft_calculations": calc_count})
+        return draft
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Orchestrator
+    # ──────────────────────────────────────────────────────────────────────
+
+    def run(self) -> Dict[str, Any]:
+        """Execute all six stages end-to-end.
+
+        Returns a summary dict suitable for logging, JSON export, or display.
+        The golden reference book is never touched and no production switch
+        is performed.
+        """
+        logger.info(
+            "=== BookIngestionRunner START  book_id=%r  pdf=%s ===",
+            self.book_id,
+            self.pdf_path.name,
+        )
+        self._run_log = []
+
+        raw_text, extraction_meta, probe_status = self.stage_1_extract()
+        self.stage_2_preserve_raw(raw_text, extraction_meta)
+        sections = self.stage_3_structural_split(raw_text)
+        candidates = self.stage_4_extract_candidates(raw_text, sections)
+        db_result = self.stage_5_ingest_db()
+        draft = self.stage_6_draft_catalog(sections, candidates, extraction_meta)
+
+        summary: Dict[str, Any] = {
+            "book_id": self.book_id,
+            "book_title": self.book_title,
+            "source_pdf": str(self.pdf_path),
+            "output_dir": str(self.output_dir),
+            "extraction_status": probe_status,
+            "extraction_strategy": extraction_meta.get("extraction_strategy"),
+            "total_pages": extraction_meta.get("total_pages"),
+            "raw_text_length": extraction_meta.get("raw_text_length"),
+            "sections_found": len(sections),
+            "candidates_found": len(candidates),
+            "draft_calculations": len(draft.get("calculations") or []),
+            "sqlite_book_id": db_result.get("book_id"),
+            "artifacts_written": {
+                "source_manifest": str(self._manifest_path),
+                "source_corpus": str(self._corpus_path),
+                "chapter_inventory": str(self._inventory_path),
+                "calc_candidates": str(self._candidates_path),
+                "draft_catalog": str(self._draft_catalog_path),
+            },
+            # Explicit safety confirmations
+            "golden_reference_untouched": True,
+            "production_switch_performed": False,
+            "ui_changed": False,
+            "stage_log": self._run_log,
+        }
+
+        logger.info(
+            "=== BookIngestionRunner COMPLETE  sections=%d  candidates=%d  drafts=%d ===",
+            len(sections),
+            len(candidates),
+            len(draft.get("calculations") or []),
+        )
+        return summary
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Internal helpers
+    # ──────────────────────────────────────────────────────────────────────
+
+    def _log_stage(self, stage: str, info: Dict[str, Any]) -> None:
+        self._run_log.append({"stage": stage, "timestamp": _now_iso(), **info})
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+def _build_arg_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="book_ingestion_runner",
+        description=(
+            "BookIngestionRunner – ingest a new PDF numerology book and produce "
+            "structured artifacts for Book Lab review.  "
+            "The golden reference book (ספר הנומרולוגיה השלם) is NEVER modified."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  python -m NumerologyReportGenerator.book_ingestion.book_ingestion_runner \\\n"
+            '      --pdf "C:\\books\\new_book.pdf" \\\n'
+            '      --title "נומרולוגיה מתקדמת" \\\n'
+            '      --id   "advanced_numerology_2025"\n'
+        ),
+    )
+    p.add_argument(
+        "--pdf", required=True,
+        help="Absolute path to the source PDF file",
+    )
+    p.add_argument(
+        "--title", required=True,
+        help="Book display title (used in artifact filenames)",
+    )
+    p.add_argument(
+        "--id", dest="book_id", required=True,
+        help="Machine-readable book identifier (e.g. my_new_book_2025)",
+    )
+    p.add_argument(
+        "--corpus", default="green",
+        help="Corpus label for SQLite ingestion (default: green)",
+    )
+    p.add_argument(
+        "--outdir", default=None,
+        help="Output directory (default: interpretations/{title}/ inside NumerologyReportGenerator)",
+    )
+    p.add_argument(
+        "--verbose", action="store_true",
+        help="Enable DEBUG-level logging",
+    )
+    return p
+
+
+def main(argv: Optional[List[str]] = None) -> None:
+    parser = _build_arg_parser()
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    runner = BookIngestionRunner(
+        book_title=args.title,
+        book_id=args.book_id,
+        pdf_path=args.pdf,
+        output_dir=args.outdir,
+        corpus=args.corpus,
+    )
+    summary = runner.run()
+
+    _SEP = "=" * 72
+    print(f"\n{_SEP}")
+    print("  BookIngestionRunner — Summary")
+    print(_SEP)
+    print(f"  Book title   : {summary['book_title']}")
+    print(f"  Book ID      : {summary['book_id']}")
+    print(f"  Source PDF   : {summary['source_pdf']}")
+    print(f"  Extraction   : {summary['extraction_strategy']}  ({summary['extraction_status']})")
+    print(f"  Pages        : {summary['total_pages']}")
+    print(f"  Sections     : {summary['sections_found']}")
+    print(f"  Candidates   : {summary['candidates_found']}")
+    print(f"  Draft calcs  : {summary['draft_calculations']}")
+    print(f"  SQLite ID    : {summary['sqlite_book_id']}")
+    print()
+    print("  Artifacts written:")
+    for key, path in summary["artifacts_written"].items():
+        print(f"    {key:<22s}: {path}")
+    print()
+    print(f"  Golden reference unchanged : {summary['golden_reference_untouched']}")
+    print(f"  Production switch          : {summary['production_switch_performed']}")
+    print(f"  UI changed                 : {summary['ui_changed']}")
+    print(_SEP + "\n")
+
+
+if __name__ == "__main__":
+    main()
