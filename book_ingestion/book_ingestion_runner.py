@@ -881,13 +881,16 @@ def _write_text(path: Path, text: str) -> None:
 def _extract_full_pdf_text(
     pdf_path: Path,
     engine: OCREngine,
+    pre_computed_probe: Dict[str, Any] | None = None,
 ) -> Tuple[str, Dict[str, Any]]:
     """Extract complete page-by-page text from a PDF, preserving page markers.
 
     Strategy priority:
       1. fitz native-text (all pages)  – preferred for text-native PDFs
       2. ocr/text_extractor            – handles mixed/scanned PDFs, all pages
-      3. ocr_engine.inspect() sample   – fallback, ≤40 pages
+      2b. pdf2image+tesseract (all pages) – when fitz/legacy unavailable
+      3. pre_computed_probe reuse      – avoid double OCR when probe already ran
+      4. ocr_engine.inspect() sample   – last-resort fallback, ≤3 pages
 
     Page boundaries are always preserved as '--- Page N ---' markers so that
     rule_extractor._find_page_hint() and the structural split work correctly.
@@ -979,10 +982,55 @@ def _extract_full_pdf_text(
             meta["legacy_force_ocr_error"] = str(exc)
 
     # ------------------------------------------------------------------
-    # Strategy 3: ocr_engine.inspect() sample (≤40 pages, always available)
+    # ------------------------------------------------------------------
+    # Strategy 2b: pdf2image + tesseract, all pages (when fitz unavailable)
+    # ------------------------------------------------------------------
+    try:
+        from pdf2image import convert_from_path as _pdf2img  # type: ignore
+        import pytesseract as _pytess  # type: ignore
+        pages_all = _pdf2img(str(pdf_path), dpi=150)
+        total = len(pages_all)
+        meta["total_pages"] = total
+        parts_ocr: List[str] = []
+        for idx, img in enumerate(pages_all, start=1):
+            try:
+                page_text = _pytess.image_to_string(img, lang=engine.language, timeout=engine.tesseract_timeout_sec)
+            except Exception:
+                page_text = ""
+            if page_text.strip():
+                parts_ocr.append(f"--- Page {idx} ---\n{page_text.strip()}")
+                meta["pages_extracted"] = meta.get("pages_extracted", 0) + 1
+            else:
+                parts_ocr.append(f"--- Page {idx} (Empty) ---")
+        joined_ocr = "\n".join(parts_ocr)
+        meaningful_ocr = len(re.sub(r"---\s*Page\s*\d+[^\n]*---", "", joined_ocr).strip())
+        if meaningful_ocr >= engine.MIN_TEXT_CHARS:
+            meta["strategy"] = "pdf2image+tesseract-full"
+            meta["ocr_needed_pages"] = total
+            return joined_ocr, meta
+    except Exception as exc:
+        logger.warning("pdf2image full-page OCR failed: %s", exc)
+        meta["pdf2image_full_error"] = str(exc)
+
+    # ------------------------------------------------------------------
+    # Strategy 3: reuse pre-computed probe to avoid double OCR
+    # ------------------------------------------------------------------
+    if pre_computed_probe is not None:
+        probe_text = str(pre_computed_probe.get("text") or "")
+        if probe_text.strip():
+            logger.info("Reusing pre-computed probe result (avoids second OCR pass)")
+            probe_meta = dict(pre_computed_probe.get("metadata") or {})
+            meta["strategy"] = f"pre_computed_probe:{pre_computed_probe.get('status', 'unknown')}"
+            meta["pages_extracted"] = probe_meta.get("pages_sampled", 0)
+            meta["total_pages"] = probe_meta.get("pages_sampled", 0)
+            meta["extraction_quality"] = "sample_only"
+            return probe_text, meta
+
+    # ------------------------------------------------------------------
+    # Strategy 4: ocr_engine.inspect() sample (≤3 pages, last resort)
     # ------------------------------------------------------------------
     logger.warning(
-        "Full-page extraction unavailable – falling back to ocr_engine sample (≤40 pages)"
+        "Full-page extraction unavailable – falling back to ocr_engine sample (≤3 pages)"
     )
     result = engine.inspect(str(pdf_path))
     sample_text = str(result.get("text") or "")
@@ -1502,11 +1550,6 @@ class BookIngestionRunner:
         """
         logger.info("[Stage 1] Inspecting %s", self.pdf_path.name)
 
-        # Quick probe via existing OCREngine (reused component)
-        probe = self._engine.inspect(str(self.pdf_path))
-        probe_status = str(probe.get("status") or "unknown")
-        logger.info("[Stage 1] OCREngine probe → status=%s", probe_status)
-
         if self.source_text_override.strip():
             raw_text = self.source_text_override
             extract_meta = {
@@ -1515,9 +1558,15 @@ class BookIngestionRunner:
                 "pages_extracted": len(_PAGE_MARKER_RE.findall(raw_text)),
                 "ocr_needed_pages": 0,
             }
+            probe_status = "override"
         else:
-            # Full corpus extraction (all pages)
-            raw_text, extract_meta = _extract_full_pdf_text(self.pdf_path, self._engine)
+            # Full corpus extraction (all pages) — probe status derived from result,
+            # avoiding a redundant second OCR pass.
+            raw_text, extract_meta = _extract_full_pdf_text(
+                self.pdf_path, self._engine
+            )
+            probe_status = extract_meta.get("strategy", "unknown")
+        logger.info("[Stage 1] extraction strategy → %s", probe_status)
 
         extraction_meta: Dict[str, Any] = {
             "source_path": str(self.pdf_path),
@@ -1828,91 +1877,28 @@ class BookIngestionRunner:
 # ---------------------------------------------------------------------------
 
 def _build_arg_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(
-        prog="book_ingestion_runner",
-        description=(
-            "BookIngestionRunner – ingest a new PDF numerology book and produce "
-            "structured artifacts for Book Lab review.  "
-            "The golden reference book (ספר הנומרולוגיה השלם) is NEVER modified."
-        ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=(
-            "Examples:\n"
-            "  python -m NumerologyReportGenerator.book_ingestion.book_ingestion_runner \\\n"
-            '      --pdf "C:\\books\\new_book.pdf" \\\n'
-            '      --title "נומרולוגיה מתקדמת" \\\n'
-            '      --id   "advanced_numerology_2025"\n'
-        ),
+    parser = argparse.ArgumentParser(
+        description='Run BookIngestionRunner stages on a single PDF.',
     )
-    p.add_argument(
-        "--pdf", required=True,
-        help="Absolute path to the source PDF file",
-    )
-    p.add_argument(
-        "--title", required=True,
-        help="Book display title (used in artifact filenames)",
-    )
-    p.add_argument(
-        "--id", dest="book_id", required=True,
-        help="Machine-readable book identifier (e.g. my_new_book_2025)",
-    )
-    p.add_argument(
-        "--corpus", default="green",
-        help="Corpus label for SQLite ingestion (default: green)",
-    )
-    p.add_argument(
-        "--outdir", default=None,
-        help="Output directory (default: interpretations/research/{title}/ inside NumerologyReportGenerator)",
-    )
-    p.add_argument(
-        "--verbose", action="store_true",
-        help="Enable DEBUG-level logging",
-    )
-    return p
+    parser.add_argument('--pdf', required=True, help='Path to PDF file')
+    parser.add_argument('--output-dir', required=True, help='Output directory for artifacts')
+    parser.add_argument('--book-title', default='', help='Book title override')
+    parser.add_argument('--book-id', default='', help='Book ID override')
+    parser.add_argument('--corpus', default='', help='Corpus name')
+    parser.add_argument('--force', action='store_true', help='Re-process even if artifacts exist')
+    return parser
 
 
-def main(argv: Optional[List[str]] = None) -> None:
-    parser = _build_arg_parser()
-    args = parser.parse_args(argv)
-
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%H:%M:%S",
+if __name__ == '__main__':
+    import json as _json
+    _args = _build_arg_parser().parse_args()
+    _pdf = Path(_args.pdf)
+    _runner = BookIngestionRunner(
+        book_title=_args.book_title or _pdf.stem,
+        book_id=_args.book_id or normalize_corpus_key(_pdf.stem),
+        pdf_path=str(_pdf),
+        output_dir=_args.output_dir,
+        corpus=_args.corpus,
     )
-
-    runner = BookIngestionRunner(
-        book_title=args.title,
-        book_id=args.book_id,
-        pdf_path=args.pdf,
-        output_dir=args.outdir,
-        corpus=args.corpus,
-    )
-    summary = runner.run()
-
-    _SEP = "=" * 72
-    print(f"\n{_SEP}")
-    print("  BookIngestionRunner — Summary")
-    print(_SEP)
-    print(f"  Book title   : {summary['book_title']}")
-    print(f"  Book ID      : {summary['book_id']}")
-    print(f"  Source PDF   : {summary['source_pdf']}")
-    print(f"  Extraction   : {summary['extraction_strategy']}  ({summary['extraction_status']})")
-    print(f"  Pages        : {summary['total_pages']}")
-    print(f"  Sections     : {summary['sections_found']}")
-    print(f"  Candidates   : {summary['candidates_found']}")
-    print(f"  Draft calcs  : {summary['draft_calculations']}")
-    print(f"  SQLite ID    : {summary['sqlite_book_id']}")
-    print()
-    print("  Artifacts written:")
-    for key, path in summary["artifacts_written"].items():
-        print(f"    {key:<22s}: {path}")
-    print()
-    print(f"  Golden reference unchanged : {summary['golden_reference_untouched']}")
-    print(f"  Production switch          : {summary['production_switch_performed']}")
-    print(f"  UI changed                 : {summary['ui_changed']}")
-    print(_SEP + "\n")
-
-
-if __name__ == "__main__":
-    main()
+    _result = _runner.run()
+    print(_json.dumps(_result, ensure_ascii=False, indent=2))

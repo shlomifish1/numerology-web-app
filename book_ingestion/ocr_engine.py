@@ -210,7 +210,13 @@ class OCREngine:
             'legacy_ocr_root_available': legacy_root.exists(),
             'legacy_site_packages': str(legacy_packages),
             'legacy_site_packages_available': legacy_packages.exists(),
-            'full_ocr_available': bool(has_tesseract and TESSERACT_PYTHON_AVAILABLE and FITZ_AVAILABLE and Image is not None),
+            # full_ocr_available: fitz is preferred but pdf2image is a valid fallback
+            'full_ocr_available': bool(
+                has_tesseract
+                and TESSERACT_PYTHON_AVAILABLE
+                and Image is not None
+                and (FITZ_AVAILABLE or PDF2IMAGE_AVAILABLE)
+            ),
             'text_extraction_available': bool(PYPDF2_AVAILABLE or FITZ_AVAILABLE),
         }
 
@@ -706,8 +712,11 @@ class OCREngine:
         if len(str(candidate.get('text') or '').strip()) >= self.MIN_TEXT_CHARS:
             return candidate
 
-        if self._can_run_ocr() and FITZ_AVAILABLE:
-            ocr_result = self._ocr_pdf_with_fitz(path)
+        if self._can_run_ocr():
+            if FITZ_AVAILABLE:
+                ocr_result = self._ocr_pdf_with_fitz(path)
+            else:
+                ocr_result = self._ocr_pdf_with_pdf2image(path)
             if len((ocr_result.get('text') or '').strip()) >= self.MIN_TEXT_CHARS:
                 return ocr_result
 
@@ -761,6 +770,34 @@ class OCREngine:
         except Exception as exc:
             return {'status': 'pdf_error', 'text': '', 'metadata': {'error': str(exc), 'parser': 'fitz-text'}}
 
+    def _safe_tesseract_image_to_string(self, image: object) -> str:
+        """Run pytesseract on a PIL Image with a timeout, returning empty string on failure."""
+        if not TESSERACT_PYTHON_AVAILABLE or pytesseract is None:
+            return ''
+        try:
+            return pytesseract.image_to_string(
+                image,
+                lang=self.language,
+                timeout=self.tesseract_timeout_sec,
+            )
+        except Exception as exc:
+            logger.debug('tesseract failed: %s', exc)
+            return ''
+
+    def _can_run_ocr(self) -> bool:
+        """Return True when all prerequisites for OCR are satisfied.
+
+        fitz is the preferred renderer but pdf2image is accepted as a fallback
+        so that books can still be OCR-processed when PyMuPDF is not installed.
+        """
+        has_renderer = FITZ_AVAILABLE or PDF2IMAGE_AVAILABLE
+        return bool(
+            TESSERACT_PYTHON_AVAILABLE
+            and self.tesseract_cmd
+            and has_renderer
+            and Image is not None
+        )
+
     def _ocr_pdf_with_fitz(self, path: Path) -> Dict[str, object]:
         try:
             document = fitz.open(str(path))
@@ -780,6 +817,33 @@ class OCREngine:
         except Exception as exc:
             return {'status': 'ocr_error', 'text': '', 'metadata': {'error': str(exc)}}
 
+    def _ocr_pdf_with_pdf2image(self, path: Path) -> Dict[str, object]:
+        """Fallback OCR path when fitz (PyMuPDF) is not available.
+
+        Converts up to 3 pages to PIL images using pdf2image, then runs
+        Tesseract on each image.  Functionally equivalent to _ocr_pdf_with_fitz
+        but relies only on poppler + pdf2image instead of PyMuPDF.
+        """
+        if not PDF2IMAGE_AVAILABLE:
+            return {'status': 'ocr_pending', 'text': '', 'metadata': {'error': 'pdf2image_unavailable'}}
+        try:
+            from pdf2image import convert_from_path as _convert  # type: ignore
+
+            pages = _convert(str(path), first_page=1, last_page=3, dpi=200)
+            snippets: list[str] = []
+            for image in pages:
+                text = self._safe_tesseract_image_to_string(image)
+                if text.strip():
+                    snippets.append(text.strip())
+            text = chr(10).join(snippets)
+            return {
+                'status': 'ocr_extracted' if text else 'ocr_pending',
+                'text': text,
+                'metadata': {'parser': 'pdf2image+tesseract', 'pages_sampled': len(pages)},
+            }
+        except Exception as exc:
+            return {'status': 'ocr_error', 'text': '', 'metadata': {'error': str(exc), 'parser': 'pdf2image+tesseract'}}
+
     def _inspect_image(self, path: Path) -> Dict[str, object]:
         if self._can_run_ocr() and Image is not None:
             try:
@@ -790,30 +854,5 @@ class OCREngine:
                     'metadata': {'parser': 'tesseract-image'},
                 }
             except Exception as exc:
-                return {'status': 'ocr_error', 'text': '', 'metadata': {'error': str(exc)}}
-        return {'status': 'ocr_pending', 'text': '', 'metadata': {'parser': 'image-metadata-only'}}
-
-    def _can_run_ocr(self) -> bool:
-        return bool(TESSERACT_PYTHON_AVAILABLE and self.tesseract_cmd and FITZ_AVAILABLE and Image is not None)
-
-    def _safe_tesseract_image_to_string(self, image, config: str | None = None) -> str:
-        """Run tesseract in a guarded mode to avoid breaking the whole extraction flow."""
-        if not self._can_run_ocr():
-            return ''
-        try:
-            kwargs = {'lang': self.language, 'timeout': self.tesseract_timeout_sec}
-            if config:
-                kwargs['config'] = config
-            return str(pytesseract.image_to_string(image, **kwargs) or '')
-        except TypeError:
-            # Older pytesseract versions may not support timeout kwarg.
-            try:
-                if config:
-                    return str(pytesseract.image_to_string(image, lang=self.language, config=config) or '')
-                return str(pytesseract.image_to_string(image, lang=self.language) or '')
-            except Exception as exc:
-                logger.warning("tesseract OCR failed (compat mode): %s", exc)
-                return ''
-        except Exception as exc:
-            logger.warning("tesseract OCR failed: %s", exc)
-            return ''
+                return {'status': 'ocr_error', 'text': '', 'metadata': {'error': str(exc), 'parser': 'tesseract-image'}}
+        return {'status': 'ocr_pending', 'text': '', 'metadata': {'parser': 'tesseract-image', 'reason': 'ocr_unavailable'}}
