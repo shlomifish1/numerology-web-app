@@ -30,6 +30,7 @@ GOOGLE_EXPORTS = {
     "application/vnd.google-apps.drawing": ("image/png", ".png"),
 }
 _CONFLICT_NAME_STRIP_RE = re.compile(r"[\s\-_()[\].,;:'\"/\\]+")
+GOOGLE_WORKSPACE_MIME_PREFIX = "application/vnd.google-apps."
 
 
 class DriveAuthRequiredError(RuntimeError):
@@ -342,6 +343,9 @@ class DriveSync:
         self._download_media(file_id, target_path)
         return target_path
 
+    def _is_google_workspace_type(self, mime_type: str) -> bool:
+        return str(mime_type or "").startswith(GOOGLE_WORKSPACE_MIME_PREFIX)
+
     def _sync_folder(
         self,
         folder_id: str,
@@ -391,19 +395,42 @@ class DriveSync:
                 )
                 continue
 
-            downloaded_path = self._download_file(item, destination)
-            manifest.append(
-                {
-                    "id": item.get("id"),
-                    "name": item.get("name"),
-                    "mimeType": mime_type,
-                    "local_path": str(downloaded_path),
-                    "modifiedTime": item.get("modifiedTime"),
-                    "size": item.get("size"),
-                    "level": level,
-                    "action": "downloaded",
-                }
-            )
+            try:
+                downloaded_path = self._download_file(item, destination)
+                manifest.append(
+                    {
+                        "id": item.get("id"),
+                        "name": item.get("name"),
+                        "mimeType": mime_type,
+                        "local_path": str(downloaded_path),
+                        "modifiedTime": item.get("modifiedTime"),
+                        "size": item.get("size"),
+                        "level": level,
+                        "action": "downloaded",
+                    }
+                )
+            except Exception as exc:
+                # Google-native files without export mapping should not abort full-folder sync.
+                message = str(exc or "")
+                if self._is_google_workspace_type(mime_type) and (
+                    "fileNotDownloadable" in message
+                    or "Only files with binary content can be downloaded" in message
+                ):
+                    manifest.append(
+                        {
+                            "id": item.get("id"),
+                            "name": item.get("name"),
+                            "mimeType": mime_type,
+                            "local_path": "",
+                            "modifiedTime": item.get("modifiedTime"),
+                            "size": item.get("size"),
+                            "level": level,
+                            "action": "skipped_unsupported_workspace_type",
+                            "error": message,
+                        }
+                    )
+                    continue
+                raise
 
     def preview_top_level_conflicts(self, folder_ref: str, destination_dir: str | Path) -> Dict[str, Any]:
         if not self.service:
