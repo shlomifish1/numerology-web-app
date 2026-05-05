@@ -7,10 +7,12 @@ import json
 import os
 import pickle
 import re
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
@@ -27,6 +29,7 @@ GOOGLE_EXPORTS = {
     "application/vnd.google-apps.presentation": ("application/pdf", ".pdf"),
     "application/vnd.google-apps.drawing": ("image/png", ".png"),
 }
+_CONFLICT_NAME_STRIP_RE = re.compile(r"[\s\-_()[\].,;:'\"/\\]+")
 
 
 class DriveAuthRequiredError(RuntimeError):
@@ -69,9 +72,35 @@ class DriveSync:
         with token_file.open("wb") as token:
             pickle.dump(creds, token)
 
+    @staticmethod
+    def _is_invalid_grant_error(exc: Exception) -> bool:
+        text = str(exc or "").lower()
+        return (
+            "invalid_grant" in text
+            or "token has been expired or revoked" in text
+            or "expired or revoked" in text
+            or "refresh token is invalid" in text
+            or "invalid_rapt" in text
+        )
+
+    @staticmethod
+    def _invalidate_token_file(token_file: Path) -> None:
+        if not token_file.exists():
+            return
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        invalid_path = token_file.with_name(f"{token_file.name}.invalid_{timestamp}")
+        try:
+            token_file.replace(invalid_path)
+        except Exception:
+            try:
+                token_file.unlink(missing_ok=True)
+            except Exception:
+                pass
+
     def authenticate(self, *, interactive: bool = False) -> None:
         token_file = self._resolve_token_file()
         credentials_file = self._resolve_credentials_file()
+        reauth_required = False
 
         self.creds = None
         if token_file.exists():
@@ -83,19 +112,53 @@ class DriveSync:
 
         if not self.creds or not getattr(self.creds, "valid", False):
             if self.creds and getattr(self.creds, "expired", False) and getattr(self.creds, "refresh_token", None):
-                self.creds.refresh(Request())
-                self._write_token(token_file, self.creds)
+                try:
+                    self.creds.refresh(Request())
+                    self._write_token(token_file, self.creds)
+                except RefreshError as exc:
+                    if self._is_invalid_grant_error(exc):
+                        reauth_required = True
+                        self.creds = None
+                        self._invalidate_token_file(token_file)
+                    else:
+                        raise
+                except Exception as exc:
+                    if self._is_invalid_grant_error(exc):
+                        reauth_required = True
+                        self.creds = None
+                        self._invalidate_token_file(token_file)
+                    else:
+                        raise
             elif interactive:
                 flow = InstalledAppFlow.from_client_secrets_file(str(credentials_file), SCOPES)
                 self.creds = flow.run_local_server(port=0, open_browser=True)
                 self._write_token(token_file, self.creds)
             else:
-                raise DriveAuthRequiredError(
-                    "Google Drive authorization is required. "
+                message = (
+                    "Google Drive authorization expired or was revoked. "
+                    "Reconnect Drive and retry sync."
+                    if reauth_required
+                    else "Google Drive authorization is required. "
                     "Start OAuth first and then retry sync."
+                )
+                raise DriveAuthRequiredError(
+                    message
                 )
 
         self.service = build("drive", "v3", credentials=self.creds)
+        try:
+            # Force an authenticated call so revoked tokens fail here with a clear reauth signal.
+            self.service.about().get(fields="user").execute()
+        except Exception as exc:
+            if self._is_invalid_grant_error(exc):
+                self._invalidate_token_file(token_file)
+                self.creds = None
+                self.service = None
+                raise DriveAuthRequiredError(
+                    "Google Drive authorization expired or was revoked. "
+                    "Reconnect Drive and retry sync."
+                ) from exc
+            raise
 
     def begin_oauth_web_flow(self, callback_url: str) -> Dict[str, Any]:
         callback = str(callback_url or "").strip()
@@ -155,7 +218,19 @@ class DriveSync:
             flow.code_verifier = code_verifier
         # Google may return previously granted scopes for the same client.
         # Pass scope=None at token exchange time to avoid strict scope equality failures.
-        flow.fetch_token(authorization_response=callback_response, scope=None)
+        try:
+            flow.fetch_token(authorization_response=callback_response, scope=None)
+        except Exception as exc:
+            if self._is_invalid_grant_error(exc):
+                try:
+                    state_file.unlink(missing_ok=True)
+                except Exception:
+                    pass
+                raise DriveAuthRequiredError(
+                    "Google Drive authorization failed (invalid_grant). "
+                    "Start the OAuth flow again and approve access."
+                ) from exc
+            raise
 
         self.creds = flow.credentials
         self._write_token(token_file, self.creds)
@@ -190,19 +265,34 @@ class DriveSync:
         cleaned = re.sub(r'[<>:"/\\\\|?\*\x00-\x1f]', "_", name).strip().rstrip(".")
         return cleaned or "drive_file"
 
+    @staticmethod
+    def _normalise_conflict_name(name: str) -> str:
+        text = unicodedata.normalize("NFC", str(name or ""))
+        text = _CONFLICT_NAME_STRIP_RE.sub("", text)
+        return text.lower()
+
     def _list_children(self, folder_id: str) -> List[Dict[str, Any]]:
         query = f"'{folder_id}' in parents and trashed = false"
         files: List[Dict[str, Any]] = []
         page_token: Optional[str] = None
         while True:
-            response = self.service.files().list(
-                q=query,
-                fields="nextPageToken, files(id,name,mimeType,modifiedTime,size)",
-                pageSize=1000,
-                pageToken=page_token,
-                supportsAllDrives=True,
-                includeItemsFromAllDrives=True,
-            ).execute()
+            try:
+                response = self.service.files().list(
+                    q=query,
+                    fields="nextPageToken, files(id,name,mimeType,modifiedTime,size)",
+                    pageSize=1000,
+                    pageToken=page_token,
+                    supportsAllDrives=True,
+                    includeItemsFromAllDrives=True,
+                ).execute()
+            except Exception as exc:
+                if self._is_invalid_grant_error(exc):
+                    self._invalidate_token_file(self._resolve_token_file())
+                    raise DriveAuthRequiredError(
+                        "Google Drive authorization expired or was revoked. "
+                        "Reconnect Drive and retry sync."
+                    ) from exc
+                raise
             files.extend(list(response.get("files", []) or []))
             page_token = response.get("nextPageToken")
             if not page_token:
@@ -223,7 +313,16 @@ class DriveSync:
             downloader = MediaIoBaseDownload(fh, request)
             done = False
             while not done:
-                _, done = downloader.next_chunk()
+                try:
+                    _, done = downloader.next_chunk()
+                except Exception as exc:
+                    if self._is_invalid_grant_error(exc):
+                        self._invalidate_token_file(self._resolve_token_file())
+                        raise DriveAuthRequiredError(
+                            "Google Drive authorization expired or was revoked. "
+                            "Reconnect Drive and retry sync."
+                        ) from exc
+                    raise
         finally:
             fh.close()
 
@@ -243,14 +342,53 @@ class DriveSync:
         self._download_media(file_id, target_path)
         return target_path
 
-    def _sync_folder(self, folder_id: str, destination: Path, manifest: List[Dict[str, Any]], *, level: int = 0) -> None:
+    def _sync_folder(
+        self,
+        folder_id: str,
+        destination: Path,
+        manifest: List[Dict[str, Any]],
+        *,
+        level: int = 0,
+        top_level_resolutions: Optional[Dict[str, str]] = None,
+        is_root: bool = False,
+    ) -> None:
         destination.mkdir(parents=True, exist_ok=True)
         for item in self._list_children(folder_id):
             mime_type = str(item.get("mimeType") or "")
             name = self._safe_filename(str(item.get("name") or "drive_item"))
             if mime_type == "application/vnd.google-apps.folder":
-                child_dir = destination / name
-                self._sync_folder(str(item["id"]), child_dir, manifest, level=level + 1)
+                child_dir_name = name
+                if is_root and top_level_resolutions:
+                    raw_name = str(item.get("name") or "")
+                    conflict_key = self._normalise_conflict_name(raw_name)
+                    resolution = str(top_level_resolutions.get(conflict_key) or "sync").strip()
+                    if resolution == "skip":
+                        manifest.append(
+                            {
+                                "id": item.get("id"),
+                                "name": item.get("name"),
+                                "mimeType": mime_type,
+                                "local_path": "",
+                                "modifiedTime": item.get("modifiedTime"),
+                                "size": item.get("size"),
+                                "level": level,
+                                "action": "skipped_by_resolution",
+                            }
+                        )
+                        continue
+                    if resolution.startswith("rename:"):
+                        suffix = resolution.split(":", 1)[1].strip() if ":" in resolution else ""
+                        if suffix:
+                            child_dir_name = f"{name}{suffix}"
+                child_dir = destination / child_dir_name
+                self._sync_folder(
+                    str(item["id"]),
+                    child_dir,
+                    manifest,
+                    level=level + 1,
+                    top_level_resolutions=None,
+                    is_root=False,
+                )
                 continue
 
             downloaded_path = self._download_file(item, destination)
@@ -263,10 +401,75 @@ class DriveSync:
                     "modifiedTime": item.get("modifiedTime"),
                     "size": item.get("size"),
                     "level": level,
+                    "action": "downloaded",
                 }
             )
 
-    def sync_folder(self, folder_ref: str, destination_dir: str | Path) -> Dict[str, Any]:
+    def preview_top_level_conflicts(self, folder_ref: str, destination_dir: str | Path) -> Dict[str, Any]:
+        if not self.service:
+            self.authenticate()
+
+        folder_id = self.parse_folder_id(folder_ref)
+        destination = Path(destination_dir)
+        destination.mkdir(parents=True, exist_ok=True)
+
+        local_folders: Dict[str, Path] = {}
+        for item in destination.iterdir():
+            if not item.is_dir():
+                continue
+            local_folders[self._normalise_conflict_name(item.name)] = item
+
+        conflicts: List[Dict[str, Any]] = []
+        new_folders: List[Dict[str, Any]] = []
+        root_files: List[Dict[str, Any]] = []
+        for child in self._list_children(folder_id):
+            mime_type = str(child.get("mimeType") or "")
+            child_name = str(child.get("name") or "").strip()
+            if mime_type == "application/vnd.google-apps.folder":
+                conflict_key = self._normalise_conflict_name(child_name)
+                local_folder = local_folders.get(conflict_key)
+                if local_folder:
+                    conflicts.append(
+                        {
+                            "drive_id": str(child.get("id") or ""),
+                            "drive_name": child_name,
+                            "conflict_key": conflict_key,
+                            "local_folder": str(local_folder),
+                            "local_name": local_folder.name,
+                        }
+                    )
+                else:
+                    new_folders.append(
+                        {
+                            "drive_id": str(child.get("id") or ""),
+                            "drive_name": child_name,
+                            "conflict_key": conflict_key,
+                        }
+                    )
+            else:
+                root_files.append(
+                    {
+                        "drive_id": str(child.get("id") or ""),
+                        "drive_name": child_name,
+                        "mimeType": mime_type,
+                    }
+                )
+
+        return {
+            "folder_id": folder_id,
+            "destination": str(destination),
+            "conflicts": conflicts,
+            "new_folders": new_folders,
+            "root_files": root_files,
+        }
+
+    def sync_folder(
+        self,
+        folder_ref: str,
+        destination_dir: str | Path,
+        *,
+        top_level_resolutions: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
         if not self.service:
             self.authenticate()
 
@@ -275,15 +478,22 @@ class DriveSync:
         destination.mkdir(parents=True, exist_ok=True)
 
         manifest: List[Dict[str, Any]] = []
-        self._sync_folder(folder_id, destination, manifest)
+        self._sync_folder(
+            folder_id,
+            destination,
+            manifest,
+            top_level_resolutions=top_level_resolutions,
+            is_root=True,
+        )
 
         manifest_path = destination / "_drive_sync_manifest.json"
         manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+        downloaded_count = sum(1 for item in manifest if str(item.get("action") or "downloaded") == "downloaded")
 
         return {
             "folder_id": folder_id,
             "destination": str(destination),
-            "downloaded": len(manifest),
+            "downloaded": downloaded_count,
             "manifest_path": str(manifest_path),
             "items": manifest,
         }
