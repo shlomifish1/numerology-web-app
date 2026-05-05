@@ -10,6 +10,7 @@ import streamlit as st
 
 from book_ingestion.catalog_sync import refresh_all
 from research import ComparisonEngine
+from research.stale_cleanup import cleanup_stale_research_state
 
 
 PASSWORD_ENV_KEYS = ("RESEARCH_PASSWORD", "NUMEROLOGY_RESEARCH_PASSWORD")
@@ -41,6 +42,14 @@ def _parse_hebrew_birthdate(raw_value: str) -> Optional[Dict[str, int]]:
 
 def _gender_label(value: str) -> str:
     return "נקבה" if value == "female" else "זכר"
+
+
+def _visible_methods(methods):
+    return [
+        method
+        for method in methods
+        if method.get("visible_in_research_ui", True) and not method.get("internal_only")
+    ]
 
 
 def _save_approvals(engine: ComparisonEngine, methods, prefix: str) -> None:
@@ -193,8 +202,9 @@ def render_research_panel(*, prefix: str = "research", embedded: bool = False, t
         st.info("אפשר להגדיר סיסמה דרך משתנה סביבה `RESEARCH_PASSWORD`.")
         return
 
+    cleanup_stale_research_state()
     engine = ComparisonEngine()
-    methods_snapshot = engine.registry.refresh()
+    methods_snapshot = _visible_methods(engine.registry.refresh())
 
     with st.sidebar if not embedded else st.container():
         st.header("קלט למחקר")

@@ -192,8 +192,22 @@ class KnowledgeStore:
                 )
             connection.commit()
 
+    def _delete_books_by_ids(self, connection: sqlite3.Connection, book_ids: Sequence[int]) -> None:
+        stale_ids = [int(book_id) for book_id in book_ids if int(book_id or 0) > 0]
+        if not stale_ids:
+            return
+        placeholders = ','.join('?' for _ in stale_ids)
+        connection.execute(f'DELETE FROM book_artifacts WHERE book_id IN ({placeholders})', stale_ids)
+        connection.execute(f'DELETE FROM book_categories WHERE book_id IN ({placeholders})', stale_ids)
+        connection.execute(f'DELETE FROM book_chunks WHERE book_id IN ({placeholders})', stale_ids)
+        connection.execute(f'DELETE FROM books WHERE id IN ({placeholders})', stale_ids)
+
     def save_book_artifact(self, book_id: int, artifact_type: str, content_text: str = '', content_json: Dict[str, object] | None = None) -> None:
         with self._connect() as connection:
+            connection.execute(
+                'DELETE FROM book_artifacts WHERE book_id = ? AND artifact_type = ?',
+                (book_id, artifact_type),
+            )
             connection.execute(
                 'INSERT INTO book_artifacts (book_id, artifact_type, content_text, content_json) VALUES (?, ?, ?, ?)',
                 (book_id, artifact_type, content_text, json.dumps(content_json or {}, ensure_ascii=False)),
@@ -208,11 +222,7 @@ class KnowledgeStore:
             ).fetchall()
             valid = set(valid_sources)
             stale_ids = [row['id'] for row in existing if row['source_path'] not in valid]
-            if stale_ids:
-                placeholders = ','.join('?' for _ in stale_ids)
-                connection.execute(f'DELETE FROM book_categories WHERE book_id IN ({placeholders})', stale_ids)
-                connection.execute(f'DELETE FROM book_chunks WHERE book_id IN ({placeholders})', stale_ids)
-                connection.execute(f'DELETE FROM books WHERE id IN ({placeholders})', stale_ids)
+            self._delete_books_by_ids(connection, stale_ids)
             connection.commit()
 
     def purge_generated_records(self, corpus: str) -> None:
@@ -226,12 +236,70 @@ class KnowledgeStore:
                     ).fetchall()
                 )
             stale_ids = [row['id'] for row in rows]
-            if stale_ids:
-                placeholders = ','.join('?' for _ in stale_ids)
-                connection.execute(f'DELETE FROM book_categories WHERE book_id IN ({placeholders})', stale_ids)
-                connection.execute(f'DELETE FROM book_chunks WHERE book_id IN ({placeholders})', stale_ids)
-                connection.execute(f'DELETE FROM books WHERE id IN ({placeholders})', stale_ids)
+            self._delete_books_by_ids(connection, stale_ids)
             connection.commit()
+
+    def delete_corpus(self, corpus: str) -> None:
+        normalized = str(corpus or '').strip()
+        if not normalized:
+            return
+        with self._connect() as connection:
+            book_ids = [
+                row['id']
+                for row in connection.execute(
+                    'SELECT id FROM books WHERE corpus = ?',
+                    (normalized,),
+                ).fetchall()
+            ]
+            self._delete_books_by_ids(connection, book_ids)
+            connection.execute('DELETE FROM book_rules WHERE corpus = ?', (normalized,))
+            connection.execute('DELETE FROM book_learning_log WHERE corpus = ?', (normalized,))
+            connection.commit()
+
+    def prune_to_active_corpora(self, active_corpora: Sequence[str]) -> List[str]:
+        active = {
+            str(corpus).strip()
+            for corpus in active_corpora
+            if str(corpus or '').strip()
+        }
+        with self._connect() as connection:
+            seen = {
+                str(row['corpus']).strip()
+                for table in ('books', 'book_rules', 'book_learning_log')
+                for row in connection.execute(
+                    f"SELECT DISTINCT corpus FROM {table} WHERE TRIM(COALESCE(corpus, '')) <> ''"
+                ).fetchall()
+            }
+        stale = sorted(corpus for corpus in seen if corpus not in active)
+        for corpus in stale:
+            self.delete_corpus(corpus)
+        return stale
+
+    def dedupe_artifacts(self) -> int:
+        with self._connect() as connection:
+            stale_ids = [
+                row['id']
+                for row in connection.execute(
+                    """
+                    SELECT id
+                    FROM book_artifacts
+                    WHERE id NOT IN (
+                        SELECT MAX(id)
+                        FROM book_artifacts
+                        GROUP BY book_id, artifact_type
+                    )
+                    """
+                ).fetchall()
+            ]
+            if not stale_ids:
+                return 0
+            placeholders = ','.join('?' for _ in stale_ids)
+            result = connection.execute(
+                f'DELETE FROM book_artifacts WHERE id IN ({placeholders})',
+                stale_ids,
+            )
+            connection.commit()
+            return int(result.rowcount or 0)
 
     def list_books(self, corpus: Optional[str] = None) -> List[Dict[str, object]]:
         query = 'SELECT * FROM books WHERE 1=1'
@@ -454,15 +522,40 @@ class KnowledgeStore:
             conn.commit()
             return int(result.rowcount or 0)
 
-    def search_memory(self, query: str, corpus: str | None = None, limit: int = 20) -> List[Dict[str, object]]:
+    def search_memory(
+        self,
+        query: str,
+        corpus: str | None = None,
+        limit: int = 20,
+        corpora: Sequence[str] | None = None,
+    ) -> List[Dict[str, object]]:
         terms = [part.strip() for part in str(query or '').split() if part.strip()]
         if not terms:
             return []
         terms = terms[:8]
         search_limit = max(limit * 6, 24)
+        corpora = [
+            str(item).strip()
+            for item in (corpora or [])
+            if str(item or '').strip()
+        ]
+        if corpus and corpus not in corpora:
+            corpora.append(str(corpus).strip())
 
         def make_clause(prefix: str, fields: Sequence[str]) -> str:
             return "(" + " OR ".join(f"LOWER({prefix}{field}) LIKE ?" for field in fields) + ")"
+
+        def corpus_clause(alias: str) -> tuple[str, List[object]]:
+            if corpora:
+                placeholders = ','.join('?' for _ in corpora)
+                return f"AND {alias}.corpus IN ({placeholders})", list(corpora)
+            if corpus:
+                return f"AND {alias}.corpus = ?", [corpus]
+            return "", []
+
+        def generated_clause(alias: str) -> tuple[str, List[object]]:
+            clause = ''.join(f' AND {alias}.source_path NOT LIKE ?' for _ in GENERATED_PATTERNS)
+            return clause, list(GENERATED_PATTERNS)
 
         book_fields = ("title", "excerpt", "metadata_json", "source_path", "corpus")
         chunk_fields = ("content",)
@@ -470,8 +563,8 @@ class KnowledgeStore:
         rule_fields = ("interpretation_rules", "concept_label", "concept_key", "calc_method")
 
         book_clauses = [make_clause("b.", book_fields) for _ in terms]
-        chunk_clauses = [make_clause("c.", chunk_fields) + " OR LOWER(b.title) LIKE ? OR LOWER(b.source_path) LIKE ? OR LOWER(b.corpus) LIKE ?" for _ in terms]
-        artifact_clauses = [make_clause("a.", artifact_fields) + " OR LOWER(b.title) LIKE ? OR LOWER(b.source_path) LIKE ? OR LOWER(b.corpus) LIKE ?" for _ in terms]
+        chunk_clauses = ["(" + make_clause("c.", chunk_fields) + " OR LOWER(b.title) LIKE ? OR LOWER(b.source_path) LIKE ? OR LOWER(b.corpus) LIKE ?)" for _ in terms]
+        artifact_clauses = ["(" + make_clause("a.", artifact_fields) + " OR LOWER(b.title) LIKE ? OR LOWER(b.source_path) LIKE ? OR LOWER(b.corpus) LIKE ?)" for _ in terms]
         rule_clauses = [make_clause("r.", rule_fields) for _ in terms]
 
         def bind_patterns(fields_per_clause: int) -> List[str]:
@@ -483,6 +576,8 @@ class KnowledgeStore:
 
         rows: List[sqlite3.Row] = []
         with self._connect() as conn:
+            book_corpus_filter, book_corpus_params = corpus_clause('b')
+            book_generated_filter, book_generated_params = generated_clause('b')
             book_sql = """
                 SELECT
                     b.corpus, b.title, b.source_path, b.status, b.text_length, b.excerpt, b.updated_at,
@@ -499,18 +594,22 @@ class KnowledgeStore:
                 FROM books b
                 WHERE {conditions}
                 {corpus_filter}
+                {generated_filter}
                 ORDER BY b.updated_at DESC, b.title ASC
                 LIMIT ?
             """.format(
                 conditions=" AND ".join(book_clauses),
-                corpus_filter="AND b.corpus = ?" if corpus else "",
+                corpus_filter=book_corpus_filter,
+                generated_filter=book_generated_filter,
             )
             book_params: List[object] = bind_patterns(len(book_fields))
-            if corpus:
-                book_params.append(corpus)
+            book_params.extend(book_corpus_params)
+            book_params.extend(book_generated_params)
             book_params.append(search_limit)
             rows.extend(conn.execute(book_sql, tuple(book_params)).fetchall())
 
+            chunk_corpus_filter, chunk_corpus_params = corpus_clause('b')
+            chunk_generated_filter, chunk_generated_params = generated_clause('b')
             chunk_sql = """
                 SELECT
                     b.corpus, b.title, b.source_path, b.status, b.text_length, b.excerpt, b.updated_at,
@@ -528,22 +627,26 @@ class KnowledgeStore:
                 JOIN books b ON b.id = c.book_id
                 WHERE {conditions}
                 {corpus_filter}
+                {generated_filter}
                 ORDER BY b.updated_at DESC, b.title ASC, c.chunk_index ASC
                 LIMIT ?
             """.format(
                 conditions=" AND ".join(chunk_clauses),
-                corpus_filter="AND b.corpus = ?" if corpus else "",
+                corpus_filter=chunk_corpus_filter,
+                generated_filter=chunk_generated_filter,
             )
             chunk_params: List[object] = []
             for term in terms:
                 pattern = f"%{term.lower()}%"
                 chunk_params.extend([pattern] * len(chunk_fields))
                 chunk_params.extend([pattern, pattern, pattern])
-            if corpus:
-                chunk_params.append(corpus)
+            chunk_params.extend(chunk_corpus_params)
+            chunk_params.extend(chunk_generated_params)
             chunk_params.append(search_limit)
             rows.extend(conn.execute(chunk_sql, tuple(chunk_params)).fetchall())
 
+            artifact_corpus_filter, artifact_corpus_params = corpus_clause('b')
+            artifact_generated_filter, artifact_generated_params = generated_clause('b')
             artifact_sql = """
                 SELECT
                     b.corpus, b.title, b.source_path, b.status, b.text_length, b.excerpt, b.updated_at,
@@ -561,32 +664,35 @@ class KnowledgeStore:
                 JOIN books b ON b.id = a.book_id
                 WHERE {conditions}
                 {corpus_filter}
+                {generated_filter}
                 ORDER BY b.updated_at DESC, b.title ASC, a.artifact_type ASC
                 LIMIT ?
             """.format(
                 conditions=" AND ".join(artifact_clauses),
-                corpus_filter="AND b.corpus = ?" if corpus else "",
+                corpus_filter=artifact_corpus_filter,
+                generated_filter=artifact_generated_filter,
             )
             artifact_params: List[object] = []
             for term in terms:
                 pattern = f"%{term.lower()}%"
                 artifact_params.extend([pattern] * len(artifact_fields))
                 artifact_params.extend([pattern, pattern, pattern])
-            if corpus:
-                artifact_params.append(corpus)
+            artifact_params.extend(artifact_corpus_params)
+            artifact_params.extend(artifact_generated_params)
             artifact_params.append(search_limit)
             rows.extend(conn.execute(artifact_sql, tuple(artifact_params)).fetchall())
 
+            rule_corpus_filter, rule_corpus_params = corpus_clause('r')
             rule_sql = """
                 SELECT
                     r.corpus,
-                    COALESCE(b.title, r.concept_label) AS title,
-                    COALESCE(b.source_path, 'interpretations/' || r.corpus || '/' || r.concept_key) AS source_path,
-                    COALESCE(b.status, 'learned') AS status,
-                    COALESCE(b.text_length, LENGTH(COALESCE(r.interpretation_rules, ''))) AS text_length,
-                    COALESCE(b.excerpt, r.interpretation_rules) AS excerpt,
-                    COALESCE(b.updated_at, r.updated_at) AS updated_at,
-                    COALESCE(b.metadata_json, '{{}}') AS metadata_json,
+                    r.concept_label AS title,
+                    'interpretations/research/' || r.corpus || '/' || r.concept_key AS source_path,
+                    'learned' AS status,
+                    LENGTH(COALESCE(r.interpretation_rules, '')) AS text_length,
+                    COALESCE(r.interpretation_rules, '') AS excerpt,
+                    r.updated_at AS updated_at,
+                    '{{}}' AS metadata_json,
                     NULL AS chunk_text,
                     NULL AS chunk_index,
                     NULL AS artifact_type,
@@ -597,20 +703,16 @@ class KnowledgeStore:
                     r.interpretation_rules,
                     r.confidence
                 FROM book_rules r
-                LEFT JOIN books b
-                    ON b.corpus = r.corpus
-                    AND b.source_path NOT LIKE '%_books.md'
                 WHERE {conditions}
                 {corpus_filter}
                 ORDER BY r.updated_at DESC, r.concept_key ASC
                 LIMIT ?
             """.format(
                 conditions=" AND ".join(rule_clauses),
-                corpus_filter="AND r.corpus = ?" if corpus else "",
+                corpus_filter=rule_corpus_filter,
             )
             rule_params: List[object] = bind_patterns(len(rule_fields))
-            if corpus:
-                rule_params.append(corpus)
+            rule_params.extend(rule_corpus_params)
             rule_params.append(search_limit)
             rows.extend(conn.execute(rule_sql, tuple(rule_params)).fetchall())
 

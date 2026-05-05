@@ -1,0 +1,332 @@
+{
+  "generated_at": "2026-03-25T16:45:37.763006+00:00",
+  "book_id": "sefer_hanumerologia_hashalem",
+  "definition_version_before": "1.0.0",
+  "definition_version_after": "1.1.0",
+  "total_entries": 283,
+  "final_state_counts": {
+    "computable_with_trace": 92,
+    "blocked_with_reason": 178,
+    "interpretation_only": 13
+  },
+  "blocked_counts_by_reason": {
+    "unsupported_executor_type": 157,
+    "missing_input_mapping": 11,
+    "missing_formula": 9,
+    "missing_result_value_table": 1
+  },
+  "computed_with_interpretation": 46,
+  "computed_without_interpretation": 46,
+  "runtime_summary": {
+    "total_calculations": 283,
+    "computed_with_full_trace": 92,
+    "computed_partial": 0,
+    "computable_returned": 92,
+    "blocked_by_reason": {
+      "unsupported_executor_type": 157,
+      "interpretation_only": 13,
+      "missing_input_mapping": 11,
+      "missing_formula": 9,
+      "missing_result_value_table": 1
+    },
+    "interpretation_only": 13,
+    "missing_interpretation": 237,
+    "with_interpretation": 46,
+    "without_interpretation": 237,
+    "downgraded_to_partial_due_trace": 0,
+    "groups": {
+      "computed_with_trace": 92,
+      "interpretation_research": 29,
+      "blocked_unsupported": 162
+    }
+  },
+  "sample_payload": {
+    "full_name": "דני כהן",
+    "birth_date": "1990-05-17",
+    "current_year": 2029,
+    "letter": "א"
+  },
+  "newly_promoted_calculations": [
+    "civil_life_lesson",
+    "life_lesson_number_civil",
+    "outer_expression_calculation",
+    "personality_number",
+    "soul_expression_calculation"
+  ],
+  "interpretation_tables_added_count": 43,
+  "interpretation_tables_added_calculations": [
+    "birth_date_summation",
+    "birth_number",
+    "birth_number_calculation",
+    "birth_number_element",
+    "birth_period_1",
+    "bitui_neshama",
+    "bitui_neshama_1",
+    "bitui_neshama_11",
+    "bitui_neshama_2",
+    "bitui_neshama_22",
+    "bitui_neshama_3",
+    "bitui_neshama_33",
+    "bitui_neshama_4",
+    "bitui_neshama_44",
+    "bitui_neshama_5",
+    "bitui_neshama_55",
+    "bitui_neshama_6",
+    "bitui_neshama_66",
+    "bitui_neshama_7",
+    "bitui_neshama_77",
+    "bitui_neshama_8",
+    "bitui_neshama_88",
+    "bitui_neshama_9",
+    "bitui_neshama_99",
+    "bitui_neshama_shem_hiba",
+    "bitui_neshama_shem_lida_male",
+    "civil_life_lesson",
+    "destiny_number",
+    "encoded_letter_value",
+    "hitnahagut_muhcenet_shem_lida_male",
+    "letter_to_number_conversion",
+    "life_lesson_number_civil",
+    "life_path_number",
+    "life_path_number_civil",
+    "life_path_number_gregorian",
+    "life_path_number_western",
+    "mispar_holeeda",
+    "name_number",
+    "name_number_calculation",
+    "shiyur_haim_ezrahi",
+    "shvil_goral_shem_lida_male",
+    "soul_expression",
+    "soul_expression_calculation"
+  ],
+  "core_calculations_coverage": [
+    {
+      "calc_key": "destiny_path",
+      "label_he": "ייעוד האדם",
+      "final_state": "computable_with_trace",
+      "reason_bucket": "",
+      "runtime_status": "computed",
+      "has_runtime_trace": true
+    },
+    {
+      "calc_key": "destiny_number",
+      "label_he": "שביל הגורל",
+      "final_state": "computable_with_trace",
+      "reason_bucket": "",
+      "runtime_status": "computed",
+      "has_runtime_trace": true
+    },
+    {
+      "calc_key": "expression_of_the_soul",
+      "label_he": "מספר נשמה",
+      "final_state": "computable_with_trace",
+      "reason_bucket": "",
+      "runtime_status": "computed",
+      "has_runtime_trace": true
+    },
+    {
+      "calc_key": "soul_expression_number",
+      "label_he": "מספר ביטוי",
+      "final_state": "computable_with_trace",
+      "reason_bucket": "",
+      "runtime_status": "computed",
+      "has_runtime_trace": true
+    },
+    {
+      "calc_key": "behavior_number",
+      "label_he": "התנהגות מוחצנת",
+      "final_state": "computable_with_trace",
+      "reason_bucket": "",
+      "runtime_status": "computed",
+      "has_runtime_trace": true
+    },
+    {
+      "calc_key": "personality_number",
+      "label_he": "מספר אישיות",
+      "final_state": "computable_with_trace",
+      "reason_bucket": "",
+      "runtime_status": "computed",
+      "has_runtime_trace": true
+    },
+    {
+      "calc_key": "birth_number",
+      "label_he": "מספר לידה",
+      "final_state": "computable_with_trace",
+      "reason_bucket": "",
+      "runtime_status": "computed",
+      "has_runtime_trace": true
+    },
+    {
+      "calc_key": "life_path_number",
+      "label_he": "מספר שביל גורל",
+      "final_state": "computable_with_trace",
+      "reason_bucket": "",
+      "runtime_status": "computed",
+      "has_runtime_trace": true
+    },
+    {
+      "calc_key": "civil_life_lesson",
+      "label_he": "שיעור חיים אזרחי",
+      "final_state": "computable_with_trace",
+      "reason_bucket": "",
+      "runtime_status": "computed",
+      "has_runtime_trace": true
+    },
+    {
+      "calc_key": "life_lesson_number_civil",
+      "label_he": "שיעור חיים אזרחי",
+      "final_state": "computable_with_trace",
+      "reason_bucket": "",
+      "runtime_status": "computed",
+      "has_runtime_trace": true
+    }
+  ],
+  "top_remaining_unresolved": [
+    {
+      "calc_key": "44_or_8_destiny_number",
+      "label_he": "שביל גורל 44/8",
+      "reason_bucket": "unsupported_executor_type",
+      "input_dependencies": [
+        "תאריך לידה",
+        "שם מלא"
+      ],
+      "formula_text": "אחת השיטות מחשבת כמספר 44 והשנייה כמספר 8."
+    },
+    {
+      "calc_key": "calculate_life_cycle_position",
+      "label_he": "חישוב מיקום במחזור חיים",
+      "reason_bucket": "unsupported_executor_type",
+      "input_dependencies": [
+        "תאריך לידה",
+        "גיל נוכחי"
+      ],
+      "formula_text": "יש לקחת את נתוני שעורי החיים ולבדוק כמה מחזוריים (תשע שנים) חלפו."
+    },
+    {
+      "calc_key": "destiny_number_calculation",
+      "label_he": "שביל הגורל",
+      "reason_bucket": "unsupported_executor_type",
+      "input_dependencies": [
+        "תאריך לידה עברי",
+        "תאריך לידה אזרחי"
+      ],
+      "formula_text": "מבוסס על חיבור התוצאה הראשונית של שני תאריכי הלידה (עברי ואזרחי)"
+    },
+    {
+      "calc_key": "harmony_between_soul_and_psyche",
+      "label_he": "הרמוניה בין הנפש לנשמה",
+      "reason_bucket": "unsupported_executor_type",
+      "input_dependencies": [
+        "מפת לידה מקורית",
+        "מפת לידה חדשה"
+      ],
+      "formula_text": "ניתוח נומרולוגי של מפות הלידה של הנפש והנשמה."
+    },
+    {
+      "calc_key": "hebrew_life_lesson",
+      "label_he": "שיעור חיים עברי",
+      "reason_bucket": "missing_input_mapping",
+      "input_dependencies": [
+        "תאריך לידה עברי"
+      ],
+      "formula_text": "לא מוסבר במפורש, אבל משתמע שהוא קשור לתאריך הלידה העברי."
+    },
+    {
+      "calc_key": "life_lesson_number",
+      "label_he": "מספר שיעור חיים",
+      "reason_bucket": "unsupported_executor_type",
+      "input_dependencies": [
+        "לא מפורט בטקסט"
+      ],
+      "formula_text": "לא מפורט בטקסט"
+    },
+    {
+      "calc_key": "life_lesson_number_hebrew",
+      "label_he": "שיעור חיים עברי",
+      "reason_bucket": "missing_input_mapping",
+      "input_dependencies": [],
+      "formula_text": "לא נמצאה פורמולה מפורשת בטקסט"
+    },
+    {
+      "calc_key": "life_lesson_number_shared",
+      "label_he": "שיעור חיים משותף",
+      "reason_bucket": "unsupported_executor_type",
+      "input_dependencies": [],
+      "formula_text": "לא נמצאה פורמולה מפורשת בטקסט"
+    },
+    {
+      "calc_key": "life_lessons_calculation",
+      "label_he": "חישוב שיעורי חיים",
+      "reason_bucket": "unsupported_executor_type",
+      "input_dependencies": [
+        "שם מלא",
+        "תאריך לידה"
+      ],
+      "formula_text": "לא מפורטת, דורשת שימוש במבנים גיאומטריים (ריבועים, משולשים)."
+    },
+    {
+      "calc_key": "manifestation_ten_divine_soul_frequencies",
+      "label_he": "התגשמות של 10 תדרי נפש אלוהית",
+      "reason_bucket": "unsupported_executor_type",
+      "input_dependencies": [
+        "תדרי נפש אלוהית",
+        "צבעים"
+      ],
+      "formula_text": "10 תדרי נפש אלוהית (צבעים שונים) -> שדות אנרגיה וגשמיות"
+    },
+    {
+      "calc_key": "numerological_charts_geometry_life",
+      "label_he": "שימוש בצורות גיאומטריות בנומרולוגיה לניתוח החיים",
+      "reason_bucket": "unsupported_executor_type",
+      "input_dependencies": [
+        "נתוני לידה",
+        "שם"
+      ],
+      "formula_text": "הצבת נתונים על צלעות הצורה הגיאומטרית."
+    },
+    {
+      "calc_key": "personality_insight_name_family",
+      "label_he": "תובנת אישיות על ידי שם פרטי ושם משפחה",
+      "reason_bucket": "unsupported_executor_type",
+      "input_dependencies": [
+        "שם פרטי",
+        "שם משפחה"
+      ],
+      "formula_text": "הצבה שם פרטי ושם משפחה במחרוזת ריבועים או משולשים."
+    },
+    {
+      "calc_key": "purpose_and_goals_of_the_new_soul",
+      "label_he": "מטרות ויעדים של הנשמה החדשה",
+      "reason_bucket": "unsupported_executor_type",
+      "input_dependencies": [
+        "מפת לידה חדשה"
+      ],
+      "formula_text": "ניתוח נומרולוגי של מפת הלידה החדשה."
+    },
+    {
+      "calc_key": "shiyur_haim_ivri",
+      "label_he": "שיעור חיים עברי",
+      "reason_bucket": "missing_input_mapping",
+      "input_dependencies": [
+        "תאריך לידה עברי"
+      ],
+      "formula_text": "סכום הספרות בתאריך הלידה העברי"
+    },
+    {
+      "calc_key": "shiyur_haim_meshutaf",
+      "label_he": "שיעור חיים משותף",
+      "reason_bucket": "unsupported_executor_type",
+      "input_dependencies": [
+        "שיעור חיים עברי",
+        "שיעור חיים אזרחי"
+      ],
+      "formula_text": "שיעור חיים עברי + שיעור חיים אזרחי"
+    }
+  ],
+  "ready_as_template_for_future_ocr": false,
+  "green_legacy_still_works": true,
+  "no_production_switch": true,
+  "no_second_book_added": true,
+  "no_ocr_work_started": true,
+  "no_broad_ui_redesign": true
+}

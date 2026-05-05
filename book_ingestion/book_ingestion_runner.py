@@ -79,6 +79,7 @@ from .ocr_engine import OCREngine                          # noqa: E402
 from .book_processor import BookProcessor                  # noqa: E402
 from .knowledge_store import KnowledgeStore                # noqa: E402
 from .rule_extractor import _match_concepts, CONCEPT_CATALOG  # noqa: E402
+from interpretation_layout import research_book_dir       # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Optional: full-page extractor from ocr/ (handles all pages, not just ≤40)
@@ -117,6 +118,20 @@ _GOLDEN_BOOK_TITLE = "ספר הנומרולוגיה השלם"
 #   "--- Page 3 ---"  /  "--- Page 3 (OCR) ---"  /  "--- Page 3 (Empty) ---"
 _PAGE_MARKER_RE = re.compile(r"^---\s*Page\s*\d+", re.MULTILINE)
 
+# Per-page OCR quality markers produced by text_extractor:
+#   "--- Page 5 (OCR heb=33%) ---"      → heb_ratio = 0.33
+#   "--- Page 7 (Empty) ---"             → heb_ratio = 0.0
+#   "--- Page 3 ---"                     → native text (assumed good, skipped)
+#   "--- Page 3 (OCR heb=41% patched) ---" → previously patched page
+_PAGE_QUALITY_RE = re.compile(
+    r"---\s*Page\s*(\d+)\s*\(OCR\s+heb=(\d+)%[^)]*\)\s*---"
+    r"|---\s*Page\s*(\d+)\s*\(Empty\)\s*---",
+    re.IGNORECASE,
+)
+
+# Minimum Hebrew ratio for a page to be considered acceptable quality
+_OCR_QUALITY_THRESHOLD = 0.25
+
 # Candidate detection (mirrors what produced the golden __calc_candidates.json)
 _DIGIT_RE = re.compile(r"\d+")
 _MATH_SYMBOL_RE = re.compile(r"[=+\-×÷]")
@@ -130,6 +145,86 @@ _KEYWORD_REASONS: tuple[str, ...] = (
     "שנה", "פסגה", "קרמ", "מאסטר", "חסר", "עודף",
     "שביל", "ייעוד",
 )
+
+_PAGE_NOISE_RE = re.compile(
+    r"^\s*(?:עמוד\s*\d+|page\s*\d+|[-–—]*\s*\d+\s*[-–—]*)\s*$",
+    re.IGNORECASE,
+)
+_FORMULA_HINT_RE = re.compile(
+    r"(?:נוסח(?:ה|אות)|חישוב|לחשב|מחבר(?:ים|ות)?|סכום|סיכום|reduce|formula|calculate|calculation|[=+\-×÷])",
+    re.IGNORECASE,
+)
+_INTERPRETATION_HINT_RE = re.compile(
+    r"(?:פירוש|פרשנות|משמעות|המשמעות|interpretation|meaning|מספר\s*(?:[1-9]|11|22|33)\b)",
+    re.IGNORECASE,
+)
+_NUMEROLOGY_HINT_RE = re.compile(
+    r"(?:מספר|שם|ייעוד|גורל|נשמה|פסגה|אתגר|שנה|כתובת|דירה|בית|מאסטר|קרמ)",
+    re.IGNORECASE,
+)
+_ALPHA_RE = re.compile(r"[A-Za-z\u0590-\u05FF]")
+_NUMERIC_VALUE_HINT_RE = re.compile(
+    r"(?:^|[\s(])(מספר\s*)?(?:[1-9]|11|22|33)(?=(?:[\s:.)-]|$))",
+    re.IGNORECASE,
+)
+_VALUE_HEADER_RE = re.compile(
+    r"^\s*[|:;.,()\[\]\-–—]*\s*מספר\s+([1-9]|11|22|33|ל)\s*[|:;.,()\[\]\-–—]*\s*$",
+    re.IGNORECASE,
+)
+_FORMULA_ACTION_RE = re.compile(
+    r"(?:נוטלים|מחברים|מצמצמ|רושמים|ממשיכים|מחיק(?:ה|ת)|מסכמים|סיכום|מחברים|מפחיתים|מחסרים|מכפילים|מחלקים|אין ממשיכים בצמצום|על ידי צירוף)",
+    re.IGNORECASE,
+)
+_GENERIC_SENTENCE_SPLIT_RE = re.compile(r"(?<=[\.\!\?\n])\s+")
+
+# ---------------------------------------------------------------------------
+# Per-page OCR quality helpers
+# ---------------------------------------------------------------------------
+
+def _parse_per_page_quality(raw_text: str) -> List[Dict[str, Any]]:
+    """Parse per-page OCR quality from corpus text markers.
+
+    Returns a list of dicts sorted by page number, each containing:
+      page        – 1-based page number
+      heb_ratio   – float 0.0–1.0 (None for native-text pages)
+      source      – "ocr" | "empty" | "native"
+      needs_rescan – True if heb_ratio < _OCR_QUALITY_THRESHOLD
+
+    Native-text pages (plain "--- Page N ---") are never flagged for rescan.
+    """
+    pages: Dict[int, Dict[str, Any]] = {}
+    for m in _PAGE_QUALITY_RE.finditer(raw_text):
+        # Group 1+2: OCR match "--- Page N (OCR heb=X%) ---"
+        # Group 3:   Empty match "--- Page N (Empty) ---"
+        if m.group(1) is not None:
+            page_num = int(m.group(1))
+            heb_ratio = int(m.group(2)) / 100.0
+            source = "ocr"
+        else:
+            page_num = int(m.group(3))
+            heb_ratio = 0.0
+            source = "empty"
+        pages[page_num] = {
+            "page": page_num,
+            "heb_ratio": round(heb_ratio, 3),
+            "source": source,
+            "needs_rescan": heb_ratio < _OCR_QUALITY_THRESHOLD,
+        }
+
+    # Also detect plain native markers (no quality annotation)
+    _NATIVE_RE = re.compile(r"---\s*Page\s*(\d+)\s*---(?!\s*\()", re.MULTILINE)
+    for m in _NATIVE_RE.finditer(raw_text):
+        page_num = int(m.group(1))
+        if page_num not in pages:
+            pages[page_num] = {
+                "page": page_num,
+                "heb_ratio": None,
+                "source": "native",
+                "needs_rescan": False,
+            }
+
+    return sorted(pages.values(), key=lambda x: x["page"])
+
 
 # Structural boundary patterns
 _PART_RE = re.compile(
@@ -165,7 +260,6 @@ _INPUT_TYPE_PATTERNS: List[Dict[str, Any]] = [
             r"מספרי?\s*דירה",
             r"דירה\s*מספר",
             r"apartment\s*number",
-            r"\bapartment\b",
         ],
     },
     {
@@ -186,7 +280,7 @@ _INPUT_TYPE_PATTERNS: List[Dict[str, Any]] = [
         "patterns": [
             r"מספר\s*קומה",
             r"קומה\s*מספר",
-            r"קומה\b",
+            r"קומה\s*\d+",
             r"floor\s*number",
         ],
     },
@@ -490,6 +584,274 @@ def _aggregate_input_deps(
 
 
 # ---------------------------------------------------------------------------
+# Draft enrichment helpers
+# ---------------------------------------------------------------------------
+
+def _clean_paragraph_text(paragraph: str) -> str:
+    kept_lines: List[str] = []
+    for raw_line in str(paragraph or "").splitlines():
+        stripped = raw_line.strip()
+        if not stripped:
+            continue
+        if _PAGE_MARKER_RE.match(stripped):
+            continue
+        if _PAGE_NOISE_RE.match(stripped):
+            continue
+        if re.fullmatch(r"[\d\s,./\\|:_\-*+=]{1,20}", stripped):
+            continue
+        if len(stripped) <= 3 and not _ALPHA_RE.search(stripped):
+            continue
+        kept_lines.append(stripped)
+    return "\n".join(kept_lines).strip()
+
+
+def _split_raw_text_into_section_blocks(
+    raw_text: str,
+    sections: List[Dict[str, Any]],
+) -> List[Tuple[str, str]]:
+    section_relpaths = [s["relative_path"] for s in sections]
+    default_relpath = section_relpaths[0] if section_relpaths else "main\\body.txt"
+    section_blocks: List[Tuple[str, List[str]]] = []
+    current_lines: List[str] = []
+    section_idx = 0
+
+    for line in raw_text.splitlines():
+        stripped = line.strip()
+        is_boundary = (
+            section_idx + 1 < len(section_relpaths)
+            and (_PART_RE.match(stripped) or _CHAPTER_RE.match(stripped))
+            and len(stripped) <= 80
+        )
+        if is_boundary:
+            rel = section_relpaths[section_idx] if section_idx < len(section_relpaths) else default_relpath
+            section_blocks.append((rel, current_lines[:]))
+            section_idx += 1
+            current_lines = []
+        else:
+            current_lines.append(line)
+
+    rel = section_relpaths[section_idx] if section_idx < len(section_relpaths) else default_relpath
+    section_blocks.append((rel, current_lines))
+    return [(rel_path, "\n".join(lines).strip()) for rel_path, lines in section_blocks]
+
+
+def _has_structural_signal(paragraph: str) -> bool:
+    has_digits = _DIGIT_RE.search(paragraph) is not None
+    has_math = _MATH_SYMBOL_RE.search(paragraph) is not None
+    has_formula = _FORMULA_HINT_RE.search(paragraph) is not None
+    has_interpretation = _INTERPRETATION_HINT_RE.search(paragraph) is not None
+    has_numerology = _NUMEROLOGY_HINT_RE.search(paragraph) is not None
+    numeric_values = len(_NUMERIC_VALUE_HINT_RE.findall(paragraph))
+    if has_formula and (has_digits or has_math or has_numerology):
+        return True
+    if has_interpretation and (numeric_values >= 1 or has_numerology):
+        return True
+    if has_digits and has_math:
+        return True
+    if has_digits and numeric_values >= 2 and has_numerology:
+        return True
+    return False
+
+
+def _normalize_result_value_token(token: str) -> str:
+    clean = str(token or "").strip()
+    if clean == "ל":
+        return "9"
+    if clean in {"1", "2", "3", "4", "5", "6", "7", "8", "9", "11", "22", "33"}:
+        return clean
+    return ""
+
+
+def _dedupe_strings(items: List[str]) -> List[str]:
+    seen: set[str] = set()
+    ordered: List[str] = []
+    for item in items:
+        clean = re.sub(r"\s+", " ", str(item or "")).strip()
+        if not clean or clean in seen:
+            continue
+        seen.add(clean)
+        ordered.append(clean)
+    return ordered
+
+
+def _extract_result_value_entries(text: str, source_ref: str) -> List[Dict[str, Any]]:
+    entries: List[Dict[str, Any]] = []
+    current_value = ""
+    current_lines: List[str] = []
+    current_page: Optional[int] = None
+    value_page: Optional[int] = None
+
+    def _flush_current() -> None:
+        nonlocal current_value, current_lines, value_page
+        if not current_value:
+            return
+        meaning = _clean_paragraph_text("\n".join(current_lines))
+        meaning = re.sub(r"\s+", " ", meaning).strip()
+        if len(meaning) < 60:
+            current_value = ""
+            current_lines = []
+            value_page = None
+            return
+        ref = source_ref
+        if value_page:
+            ref = f"{source_ref}#p{value_page}"
+        entries.append(
+            {
+                "value": current_value,
+                "title": f"מספר {current_value}",
+                "meaning": meaning[:1600],
+                "source_ref": ref,
+                "page_hint": value_page,
+            }
+        )
+        current_value = ""
+        current_lines = []
+        value_page = None
+
+    for raw_line in str(text or "").splitlines():
+        stripped = raw_line.strip()
+        page_match = _PAGE_MARKER_RE.match(stripped)
+        if page_match:
+            page_hint_match = re.search(r"Page\s+(\d+)", stripped, re.IGNORECASE)
+            if page_hint_match:
+                current_page = int(page_hint_match.group(1))
+            continue
+        if not stripped or _PAGE_NOISE_RE.match(stripped):
+            continue
+        value_match = _VALUE_HEADER_RE.match(stripped)
+        if value_match:
+            _flush_current()
+            normalized = _normalize_result_value_token(value_match.group(1))
+            if not normalized:
+                continue
+            current_value = normalized
+            value_page = current_page
+            current_lines = []
+            continue
+        if current_value:
+            current_lines.append(stripped)
+
+    _flush_current()
+    deduped: List[Dict[str, Any]] = []
+    seen_values: set[str] = set()
+    for item in entries:
+        value_key = str(item.get("value") or "")
+        if value_key in seen_values:
+            continue
+        seen_values.add(value_key)
+        deduped.append(item)
+    return deduped
+
+
+def _extract_formula_payload(
+    concept_key: str,
+    chapter_text: str,
+    evidence_list: List[Dict[str, Any]],
+) -> Tuple[str, List[str], str]:
+    paragraphs = [
+        _clean_paragraph_text(paragraph)
+        for paragraph in re.split(r"\n[ \t]*\n", str(chapter_text or ""))
+    ]
+    paragraphs = [paragraph for paragraph in paragraphs if paragraph and _ALPHA_RE.search(paragraph)]
+    scored: List[Tuple[int, int, str]] = []
+    for idx, paragraph in enumerate(paragraphs):
+        if _VALUE_HEADER_RE.match(paragraph):
+            continue
+        score = 0
+        if concept_key in _match_concepts(paragraph):
+            score += 5
+        if _FORMULA_HINT_RE.search(paragraph):
+            score += 4
+        if _FORMULA_ACTION_RE.search(paragraph):
+            score += 3
+        if _MATH_SYMBOL_RE.search(paragraph):
+            score += 3
+        digit_count = len(_DIGIT_RE.findall(paragraph))
+        score += min(digit_count, 4)
+        if _has_structural_signal(paragraph):
+            score += 2
+        if len(paragraph) > 650:
+            score -= 1
+        if score >= 6:
+            scored.append((score, idx, paragraph))
+
+    best_paragraph = ""
+    chosen_indices: List[int] = []
+    if scored:
+        scored_sorted = sorted(scored, key=lambda item: (-item[0], item[1]))
+        _, best_idx, best_paragraph = scored_sorted[0]
+        chosen_indices.append(best_idx)
+        for neighbor in (best_idx - 1, best_idx + 1):
+            if 0 <= neighbor < len(paragraphs):
+                neighbor_text = paragraphs[neighbor]
+                if _FORMULA_HINT_RE.search(neighbor_text) or _FORMULA_ACTION_RE.search(neighbor_text):
+                    chosen_indices.append(neighbor)
+        chosen_indices = sorted(set(chosen_indices))
+
+    if not best_paragraph and evidence_list:
+        formula_candidates = [
+            re.sub(r"\s+", " ", str(item.get("text") or "")).strip()
+            for item in evidence_list
+            if _FORMULA_HINT_RE.search(str(item.get("text") or "")) or _MATH_SYMBOL_RE.search(str(item.get("text") or ""))
+        ]
+        formula_candidates = [item for item in formula_candidates if item]
+        if formula_candidates:
+            best_paragraph = max(formula_candidates, key=len)
+
+    formula_steps: List[str] = []
+    for idx in chosen_indices:
+        for sentence in _GENERIC_SENTENCE_SPLIT_RE.split(paragraphs[idx]):
+            cleaned = re.sub(r"\s+", " ", sentence).strip(" -|:;")
+            if len(cleaned) < 18:
+                continue
+            if not (
+                _FORMULA_HINT_RE.search(cleaned)
+                or _FORMULA_ACTION_RE.search(cleaned)
+                or _MATH_SYMBOL_RE.search(cleaned)
+                or len(_DIGIT_RE.findall(cleaned)) >= 2
+            ):
+                continue
+            formula_steps.append(cleaned[:280])
+    formula_steps = _dedupe_strings(formula_steps)[:6]
+
+    excerpt = ""
+    if evidence_list:
+        excerpt = max(
+            (
+                re.sub(r"\s+", " ", str(item.get("text") or "")).strip()
+                for item in evidence_list
+                if str(item.get("text") or "").strip()
+            ),
+            key=len,
+            default="",
+        )[:500]
+    if not excerpt:
+        excerpt = best_paragraph[:500]
+    return best_paragraph[:700], formula_steps, excerpt
+
+
+def _build_interpretation_summary(result_values: List[Dict[str, Any]], chapter_text: str) -> str:
+    if result_values:
+        preview_lines = [
+            f"{str(item.get('title') or '').strip()}: {str(item.get('meaning') or '').strip()}"
+            for item in result_values[:4]
+            if str(item.get("meaning") or "").strip()
+        ]
+        return "\n\n".join(preview_lines)[:2200]
+
+    interpretation_paragraphs: List[str] = []
+    for paragraph in re.split(r"\n[ \t]*\n", str(chapter_text or "")):
+        cleaned = _clean_paragraph_text(paragraph)
+        if len(cleaned) < 60:
+            continue
+        if not _INTERPRETATION_HINT_RE.search(cleaned):
+            continue
+        interpretation_paragraphs.append(re.sub(r"\s+", " ", cleaned).strip())
+    interpretation_paragraphs = _dedupe_strings(interpretation_paragraphs)
+    return "\n\n".join(interpretation_paragraphs[:3])[:2200]
+
+
+# ---------------------------------------------------------------------------
 # I/O helpers
 # ---------------------------------------------------------------------------
 
@@ -594,6 +956,27 @@ def _extract_full_pdf_text(
         except Exception as exc:
             logger.warning("ocr/text_extractor full extraction failed: %s", exc)
             meta["legacy_error"] = str(exc)
+
+    # ------------------------------------------------------------------
+    # Strategy 2b: force OCR on every page if mixed-mode extraction was
+    # still too sparse. This is the strongest local recovery path and is
+    # especially useful for scanned Hebrew books with weak embedded text.
+    # ------------------------------------------------------------------
+    if _LEGACY_EXTRACTOR_AVAILABLE and _ocr_extract_pdf is not None:
+        try:
+            force_ocr_text = _ocr_extract_pdf(
+                str(pdf_path), lang="heb+eng", force_ocr=True
+            )
+            if force_ocr_text and len(force_ocr_text.strip()) >= engine.MIN_TEXT_CHARS:
+                page_count = len(_PAGE_MARKER_RE.findall(force_ocr_text))
+                meta["strategy"] = "legacy-text-extractor-force-ocr"
+                meta["total_pages"] = page_count
+                meta["pages_extracted"] = page_count
+                meta["ocr_needed_pages"] = page_count
+                return force_ocr_text, meta
+        except Exception as exc:
+            logger.warning("ocr/text_extractor force OCR failed: %s", exc)
+            meta["legacy_force_ocr_error"] = str(exc)
 
     # ------------------------------------------------------------------
     # Strategy 3: ocr_engine.inspect() sample (≤40 pages, always available)
@@ -769,29 +1152,75 @@ def _extract_candidates(
     # Scan each section's paragraphs
     candidates: List[Dict[str, Any]] = []
 
+    def _clean_paragraph_text(paragraph: str) -> str:
+        kept_lines: List[str] = []
+        for raw_line in str(paragraph or "").splitlines():
+            stripped = raw_line.strip()
+            if not stripped:
+                continue
+            if _PAGE_MARKER_RE.match(stripped):
+                continue
+            if _PAGE_NOISE_RE.match(stripped):
+                continue
+            if re.fullmatch(r"[\d\s,./\\|:_-]{1,16}", stripped):
+                continue
+            if len(stripped) <= 3 and not _ALPHA_RE.search(stripped):
+                continue
+            kept_lines.append(stripped)
+        return "\n".join(kept_lines).strip()
+
+    def _has_structural_signal(paragraph: str) -> bool:
+        has_digits = _DIGIT_RE.search(paragraph) is not None
+        has_math = _MATH_SYMBOL_RE.search(paragraph) is not None
+        has_formula = _FORMULA_HINT_RE.search(paragraph) is not None
+        has_interpretation = _INTERPRETATION_HINT_RE.search(paragraph) is not None
+        has_numerology = _NUMEROLOGY_HINT_RE.search(paragraph) is not None
+        numeric_values = len(_NUMERIC_VALUE_HINT_RE.findall(paragraph))
+        if has_formula and (has_digits or has_math or has_numerology):
+            return True
+        if has_interpretation and (numeric_values >= 1 or has_numerology):
+            return True
+        if has_digits and has_math:
+            return True
+        if has_digits and numeric_values >= 2 and has_numerology:
+            return True
+        return False
+
     for rel_path, block_lines in section_blocks:
         block_text = "\n".join(block_lines)
         paragraphs = [p.strip() for p in re.split(r"\n[ \t]*\n", block_text) if p.strip()]
 
         for para_idx, para in enumerate(paragraphs, start=1):
+            clean_para = _clean_paragraph_text(para)
+            if not clean_para:
+                continue
+            if not _ALPHA_RE.search(clean_para):
+                continue
+
             reasons: List[str] = []
 
-            if _DIGIT_RE.search(para):
+            if _DIGIT_RE.search(clean_para):
                 reasons.append("digits")
-            if _MATH_SYMBOL_RE.search(para):
+            if _MATH_SYMBOL_RE.search(clean_para):
                 reasons.append("math-symbols")
             for kw in _KEYWORD_REASONS:
-                if kw in para:
+                if kw in clean_para:
                     reasons.append(kw)
 
             if not reasons:
                 continue
+            if not _has_structural_signal(clean_para):
+                continue
 
             # Honest classification of extraction confidence
-            has_digits = _DIGIT_RE.search(para) is not None
-            has_math = _MATH_SYMBOL_RE.search(para) is not None
-            if has_digits and has_math:
+            has_digits = _DIGIT_RE.search(clean_para) is not None
+            has_math = _MATH_SYMBOL_RE.search(clean_para) is not None
+            has_formula = _FORMULA_HINT_RE.search(clean_para) is not None
+            has_interpretation = _INTERPRETATION_HINT_RE.search(clean_para) is not None
+            if has_formula and (has_digits or has_math):
                 extraction_quality = "possible_formula"
+            elif has_interpretation:
+                extraction_quality = "interpretation_only"
             elif has_digits:
                 extraction_quality = "numeric_reference"
             else:
@@ -800,14 +1229,14 @@ def _extract_candidates(
             candidates.append({
                 "relative_path": rel_path,
                 "paragraph_index": para_idx,
-                "reasons": reasons,
-                "text": para,
-                "char_count": len(para),
+                "reasons": list(dict.fromkeys(reasons)),
+                "text": clean_para,
+                "char_count": len(clean_para),
                 # Honest uncertainty classification fields
                 "needs_review": True,
                 "extraction_quality": extraction_quality,
                 # Input dependency detection (see _INPUT_TYPE_PATTERNS catalog)
-                "input_dependencies": _detect_input_dependencies(para),
+                "input_dependencies": _detect_input_dependencies(clean_para),
             })
 
     return candidates
@@ -820,6 +1249,7 @@ def _extract_candidates(
 def _build_draft_catalog(
     book_title: str,
     book_id: str,
+    raw_text: str,
     sections: List[Dict[str, Any]],
     candidates: List[Dict[str, Any]],
     extraction_meta: Dict[str, Any],
@@ -852,6 +1282,11 @@ def _build_draft_catalog(
                     "input_dependencies": cand.get("input_dependencies", {}),
                 })
 
+    section_text_map = {
+        rel_path: text
+        for rel_path, text in _split_raw_text_into_section_blocks(raw_text, sections)
+    }
+
     draft_calculations: List[Dict[str, Any]] = []
     for concept_key in sorted(concept_evidence):
         evidence_list = concept_evidence[concept_key]
@@ -870,14 +1305,44 @@ def _build_draft_catalog(
 
         # Aggregate input dependencies across all evidence for this concept
         input_deps = _aggregate_input_deps(evidence_list)
+        chapter_text_parts: List[str] = []
+        seen_chapter_refs: set[str] = set()
+        for evidence in evidence_list:
+            rel_path = str(evidence.get("relative_path") or "").strip()
+            if not rel_path or rel_path in seen_chapter_refs:
+                continue
+            seen_chapter_refs.add(rel_path)
+            chapter_text = section_text_map.get(rel_path, "")
+            if chapter_text:
+                chapter_text_parts.append(chapter_text)
+        chapter_text = "\n\n".join(chapter_text_parts).strip()
+        formula_text, formula_steps, best_excerpt = _extract_formula_payload(
+            concept_key,
+            chapter_text,
+            evidence_list,
+        )
+        result_values = _extract_result_value_entries(chapter_text, chapter_ref)
+        allowed_result_values = [
+            int(value) if str(value).isdigit() else value
+            for value in [entry.get("value") for entry in result_values]
+            if str(value or "").strip()
+        ]
+        if not allowed_result_values:
+            allowed_result_values = list(range(1, 10)) + [11, 22, 33]
+        interpretation_text = _build_interpretation_summary(result_values, chapter_text)
+        interpretation_map = {
+            str(item.get("value")): str(item.get("meaning") or "")
+            for item in result_values
+            if str(item.get("value") or "").strip() and str(item.get("meaning") or "").strip()
+        }
+        source_excerpt = best_excerpt or source_excerpt
 
         draft_calculations.append({
             "calc_key": concept_key,
             "label_he": label_he,
             "short_explanation": f"טיוטה: {label_he} — דורש בדיקה ידנית",
-            # Formula fields intentionally empty – must be filled by human review
-            "formula_text": "",
-            "formula_steps": [],
+            "formula_text": formula_text,
+            "formula_steps": formula_steps,
             # ── Input dependency fields ────────────────────────────────────
             # input_dependencies: flat list of all known inputs (required + optional)
             # for compatibility with existing catalog consumers that read this field.
@@ -894,8 +1359,12 @@ def _build_draft_catalog(
             "input_dependency_confidence": input_deps["input_dependency_confidence"],
             "ambiguous_input_dependency": input_deps["ambiguous_input_dependency"],
             # ──────────────────────────────────────────────────────────────
-            "allowed_result_values": list(range(1, 10)) + [11, 22, 33],
-            "result_values": [],          # empty: do not fake computable results
+            "allowed_result_values": allowed_result_values,
+            "result_values": result_values,
+            "result_values_count": len(result_values),
+            "interpretation": interpretation_text,
+            "interpretation_excerpt": interpretation_text[:500],
+            "interpretations_by_value": interpretation_map,
             "chapter_ref": chapter_ref,
             "book_name": book_title,
             "source_refs": source_refs,
@@ -903,8 +1372,8 @@ def _build_draft_catalog(
             "enabled_in_full_map": False,  # explicitly disabled
             # Uncertainty / honest classification
             "needs_review": True,
-            "extraction_quality": "interpretation_only",
-            "missing_formula": True,
+            "extraction_quality": "possible_formula" if formula_text else ("interpretation_only" if interpretation_text else "numeric_reference"),
+            "missing_formula": not bool(formula_text),
             "confidence": confidence,
             "evidence_count": len(evidence_list),
         })
@@ -955,7 +1424,7 @@ class BookIngestionRunner:
         book_id:    Machine-readable identifier (e.g. ``'my_new_book_2025'``).
         pdf_path:   Path to the source PDF.
         output_dir: Where artifacts are written.  Defaults to
-                    ``interpretations/{book_title}/`` inside NumerologyReportGenerator.
+                    ``interpretations/research/{book_title}/`` inside NumerologyReportGenerator.
         corpus:     Corpus label for SQLite ingestion (default ``'green'``).
 
     Raises:
@@ -970,6 +1439,8 @@ class BookIngestionRunner:
         pdf_path: str,
         output_dir: Optional[str] = None,
         corpus: str = "green",
+        source_text_override: Optional[str] = None,
+        source_override_strategy: str = "",
     ) -> None:
         # ── Safety guards ──────────────────────────────────────────────────
         if book_id.strip() == _GOLDEN_BOOK_ID:
@@ -990,12 +1461,14 @@ class BookIngestionRunner:
         self.pdf_path = Path(pdf_path).resolve()
         if not self.pdf_path.exists():
             raise FileNotFoundError(f"PDF not found: {self.pdf_path}")
+        self.source_text_override = str(source_text_override or "")
+        self.source_override_strategy = str(source_override_strategy or "").strip()
 
         # ── Output directory ───────────────────────────────────────────────
         if output_dir:
             self.output_dir = Path(output_dir).resolve()
         else:
-            self.output_dir = _NRG_DIR / "interpretations" / self.book_title
+            self.output_dir = research_book_dir(self.book_title)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # ── Artifact paths (follow existing __artifact naming convention) ──
@@ -1005,6 +1478,7 @@ class BookIngestionRunner:
         self._inventory_path = self.output_dir / f"{_t}__chapter_inventory.json"
         self._candidates_path = self.output_dir / f"{_t}__calc_candidates.json"
         self._draft_catalog_path = self.output_dir / f"{_t}__draft_catalog.json"
+        self._quality_report_path = self.output_dir / f"{_t}__ocr_quality_report.json"
 
         # ── Reused existing components ─────────────────────────────────────
         self._engine = OCREngine(language="heb+eng")
@@ -1033,8 +1507,17 @@ class BookIngestionRunner:
         probe_status = str(probe.get("status") or "unknown")
         logger.info("[Stage 1] OCREngine probe → status=%s", probe_status)
 
-        # Full corpus extraction (all pages)
-        raw_text, extract_meta = _extract_full_pdf_text(self.pdf_path, self._engine)
+        if self.source_text_override.strip():
+            raw_text = self.source_text_override
+            extract_meta = {
+                "strategy": self.source_override_strategy or "override-text",
+                "total_pages": len(_PAGE_MARKER_RE.findall(raw_text)),
+                "pages_extracted": len(_PAGE_MARKER_RE.findall(raw_text)),
+                "ocr_needed_pages": 0,
+            }
+        else:
+            # Full corpus extraction (all pages)
+            raw_text, extract_meta = _extract_full_pdf_text(self.pdf_path, self._engine)
 
         extraction_meta: Dict[str, Any] = {
             "source_path": str(self.pdf_path),
@@ -1050,6 +1533,9 @@ class BookIngestionRunner:
             "language": self._engine.language,
             "ocr_capabilities": self._engine.capabilities(),
         }
+        if self.source_text_override.strip():
+            extraction_meta["source_override_used"] = True
+            extraction_meta["source_override_strategy"] = self.source_override_strategy or "override-text"
         if extract_meta.get("extraction_quality"):
             extraction_meta["extraction_quality"] = extract_meta["extraction_quality"]
         if not raw_text.strip():
@@ -1064,6 +1550,13 @@ class BookIngestionRunner:
             "total_pages": extraction_meta["total_pages"],
             "raw_text_length": extraction_meta["raw_text_length"],
         })
+
+        # Save per-page OCR quality report (used for the rescan/patch workflow)
+        try:
+            self._save_ocr_quality_report(raw_text, extraction_meta)
+        except Exception as _qr_exc:
+            logger.warning("[Stage 1] Could not save OCR quality report: %s", _qr_exc)
+
         return raw_text, extraction_meta, probe_status
 
     # ──────────────────────────────────────────────────────────────────────
@@ -1094,6 +1587,7 @@ class BookIngestionRunner:
                 "chapter_inventory": self._inventory_path.name,
                 "calc_candidates": self._candidates_path.name,
                 "draft_catalog": self._draft_catalog_path.name,
+                "ocr_quality_report": self._quality_report_path.name,
             },
             "_note": (
                 "Auto-generated by BookIngestionRunner.  All artifacts are drafts "
@@ -1175,6 +1669,7 @@ class BookIngestionRunner:
 
     def stage_6_draft_catalog(
         self,
+        raw_text: str,
         sections: List[Dict[str, Any]],
         candidates: List[Dict[str, Any]],
         extraction_meta: Dict[str, Any],
@@ -1189,6 +1684,7 @@ class BookIngestionRunner:
         draft = _build_draft_catalog(
             book_title=self.book_title,
             book_id=self.book_id,
+            raw_text=raw_text,
             sections=sections,
             candidates=candidates,
             extraction_meta=extraction_meta,
@@ -1223,7 +1719,7 @@ class BookIngestionRunner:
         sections = self.stage_3_structural_split(raw_text)
         candidates = self.stage_4_extract_candidates(raw_text, sections)
         db_result = self.stage_5_ingest_db()
-        draft = self.stage_6_draft_catalog(sections, candidates, extraction_meta)
+        draft = self.stage_6_draft_catalog(raw_text, sections, candidates, extraction_meta)
 
         summary: Dict[str, Any] = {
             "book_id": self.book_id,
@@ -1244,6 +1740,7 @@ class BookIngestionRunner:
                 "chapter_inventory": str(self._inventory_path),
                 "calc_candidates": str(self._candidates_path),
                 "draft_catalog": str(self._draft_catalog_path),
+                "ocr_quality_report": str(self._quality_report_path),
             },
             # Explicit safety confirmations
             "golden_reference_untouched": True,
@@ -1263,6 +1760,64 @@ class BookIngestionRunner:
     # ──────────────────────────────────────────────────────────────────────
     # Internal helpers
     # ──────────────────────────────────────────────────────────────────────
+
+    def _save_ocr_quality_report(
+        self,
+        raw_text: str,
+        extraction_meta: Dict[str, Any],
+    ) -> None:
+        """Parse per-page Hebrew ratios and write __ocr_quality_report.json.
+
+        The report is the key artifact for the rescan/patch workflow:
+          - pages_needing_rescan: ordered list of page numbers below threshold
+          - Each entry in pages[]: page, heb_ratio, source, needs_rescan
+
+        Only pages extracted via OCR (source="ocr" or "empty") are flagged.
+        Native-text pages (source="native") are always considered good.
+        """
+        pages = _parse_per_page_quality(raw_text)
+        pages_needing_rescan = [p["page"] for p in pages if p["needs_rescan"]]
+        extraction_errors = {
+            str(k): str(v)
+            for k, v in extraction_meta.items()
+            if str(k).endswith("_error") and str(v).strip()
+        }
+
+        # Average ratio over OCR+empty pages only
+        ocr_pages = [p for p in pages if p["source"] in ("ocr", "empty")]
+        avg_ratio: Optional[float] = None
+        if ocr_pages:
+            avg_ratio = sum(p["heb_ratio"] for p in ocr_pages) / len(ocr_pages)
+
+        report: Dict[str, Any] = {
+            "book_id": self.book_id,
+            "book_title": self.book_title,
+            "source_pdf": str(self.pdf_path),
+            "output_dir": str(self.output_dir),
+            "generated_at": _now_iso(),
+            "ocr_threshold": _OCR_QUALITY_THRESHOLD,
+            "total_pages": extraction_meta.get("total_pages", len(pages)),
+            "pages_scanned": len(pages),
+            "pages_needing_rescan": pages_needing_rescan,
+            "rescan_count": len(pages_needing_rescan),
+            "avg_heb_ratio": round(avg_ratio, 3) if avg_ratio is not None else None,
+            "extraction_strategy": extraction_meta.get("extraction_strategy", "unknown"),
+            "extraction_errors": extraction_errors,
+            "page_markers_found": len(pages),
+            "pages": pages,
+        }
+        if not pages:
+            report["integrity_warning"] = (
+                "no_page_markers_detected_in_source_corpus; "
+                "OCR/page extraction likely failed or returned non-paginated text"
+            )
+        _write_json(self._quality_report_path, report)
+        logger.info(
+            "[Stage 1] OCR quality report: %d/%d pages need rescan (avg heb=%.0f%%)",
+            len(pages_needing_rescan),
+            len(pages),
+            (avg_ratio or 0.0) * 100,
+        )
 
     def _log_stage(self, stage: str, info: Dict[str, Any]) -> None:
         self._run_log.append({"stage": stage, "timestamp": _now_iso(), **info})
@@ -1307,7 +1862,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--outdir", default=None,
-        help="Output directory (default: interpretations/{title}/ inside NumerologyReportGenerator)",
+        help="Output directory (default: interpretations/research/{title}/ inside NumerologyReportGenerator)",
     )
     p.add_argument(
         "--verbose", action="store_true",

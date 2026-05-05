@@ -3,29 +3,30 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from .approval_store import ApprovalStore
 from .method_adapters import get_adapter
-from .method_registry import MethodRegistry
+from .method_registry import INTERNAL_BASELINE_KEY, MethodRegistry
 from book_ingestion.knowledge_store import KnowledgeStore
+from interpretation_layout import (
+    path_to_corpus_alias,
+    research_source_label,
+    source_label_to_corpus_alias,
+)
 
 
 DEFAULT_ROWS = [
-    ("destiny", "שביל גורל"),
-    ("name_total", "מספר השם"),
-    ("soul", "ביטוי פנימי"),
-    ("outer", "ביטוי חיצוני"),
-    ("personal_year", "שנה אישית / מצב"),
-    ("hidden_year", "שכבה נסתרת / נפח"),
-    ("missing", "פערים"),
-    ("beneficial", "חוזקות"),
-    ("surplus", "עודפים / עומס"),
-    ("corpus_size", "חומרי מקור"),
-    ("top_themes", "תמות מובילות"),
-    ("media_mix", "סוגי קבצים"),
-    ("readiness", "מוכנות"),
-    ("next_step", "השלב הבא"),
+    ("destiny", "???? ????"),
+    ("name_total", "???? ???"),
+    ("soul", "????? ?????"),
+    ("outer", "????? ??????"),
+    ("personal_year", "??? ?????"),
+    ("hidden_year", "??? ?????"),
+    ("missing", "?????"),
+    ("beneficial", "??????"),
+    ("surplus", "??????"),
 ]
 
 DETAIL_LABELS = {
@@ -65,6 +66,74 @@ def _parse_json_object(value: object) -> dict[str, object]:
     return dict(parsed) if isinstance(parsed, dict) else {}
 
 
+def _normalize_corpus_key(value: object) -> str:
+    return (
+        str(value or "")
+        .strip()
+        .replace(" ", "_")
+        .replace("-", "_")
+        .replace("'", "")
+        .lower()
+    )
+
+
+def _method_corpus_aliases(method: Dict[str, object]) -> set[str]:
+    aliases: set[str] = set()
+    for value in (
+        method.get("resolved_corpus"),
+        method.get("key"),
+        method.get("folder"),
+    ):
+        text = str(value or "").strip()
+        if text:
+            aliases.add(text)
+            aliases.add(_normalize_corpus_key(text))
+    folder_path = str(method.get("folder_path") or "").strip()
+    if folder_path:
+        folder_name = Path(folder_path).name.strip()
+        if folder_name:
+            aliases.add(folder_name)
+            aliases.add(_normalize_corpus_key(folder_name))
+    return {
+        alias
+        for alias in aliases
+        if alias and alias != INTERNAL_BASELINE_KEY
+    }
+
+
+def _build_alias_to_key(rendered_methods: List[Dict[str, object]]) -> Dict[str, str]:
+    alias_to_key: Dict[str, str] = {}
+    for method in rendered_methods:
+        canonical = str(
+            method.get("resolved_corpus")
+            or method.get("key")
+            or ""
+        ).strip()
+        if not canonical or canonical == INTERNAL_BASELINE_KEY:
+            continue
+        for alias in _method_corpus_aliases(method):
+            alias_to_key[alias] = canonical
+    return alias_to_key
+
+
+def _source_to_corpus_key(source: object, alias_to_key: Dict[str, str]) -> str:
+    text = str(source or "").strip()
+    if not text:
+        return ""
+    alias = source_label_to_corpus_alias(text)
+    if alias:
+        return alias_to_key.get(alias) or alias_to_key.get(_normalize_corpus_key(alias)) or _normalize_corpus_key(alias)
+    try:
+        path = Path(text)
+        if path.is_absolute():
+            alias = path_to_corpus_alias(path)
+            if alias:
+                return alias_to_key.get(alias) or alias_to_key.get(_normalize_corpus_key(alias)) or _normalize_corpus_key(alias)
+    except Exception:
+        pass
+    return alias_to_key.get(text) or alias_to_key.get(_normalize_corpus_key(text)) or text
+
+
 def _detail_label(key: object) -> str:
     raw = str(key or "").strip()
     return DETAIL_LABELS.get(raw, raw.replace("_", " ") or "סעיף")
@@ -102,6 +171,7 @@ def _build_book_evidence_sections(
     *,
     store: KnowledgeStore,
     rendered_methods: List[Dict[str, object]],
+    active_corpora: List[str],
     pythagorean_result: Dict[str, object],
     first_name: str,
     last_name: str,
@@ -132,9 +202,11 @@ def _build_book_evidence_sections(
         method_key = str(method.get("key") or "").strip()
         display_name = str(method.get("display_name") or method_key or "ספר").strip()
         result = method.get("result") if isinstance(method.get("result"), dict) else {}
+        resolved_adapter = str(method.get("resolved_adapter") or "").strip()
         summary = _short_text(result.get("summary") or "", 220)
         details = result.get("details") if isinstance(result.get("details"), dict) else {}
-        if method_key and method_key != "pythagorean_existing":
+        include_method_sections = resolved_adapter not in {"GenericMethodAdapter"}
+        if method_key and method_key != INTERNAL_BASELINE_KEY and include_method_sections:
             query_parts.extend([method_key, display_name])
             if summary:
                 _add_report_section(
@@ -144,7 +216,7 @@ def _build_book_evidence_sections(
                     title=f"{display_name} · סיכום",
                     value=summary,
                     meaning=f"ספר/קורפוס פעיל למחקר עם {len(details)} חוקים מאומתים.",
-                    source=f"interpretations/{method_key}",
+                    source=research_source_label(method_key),
                 )
             for detail_key, detail in list(details.items())[:3]:
                 if not isinstance(detail, dict):
@@ -156,13 +228,17 @@ def _build_book_evidence_sections(
                     title=f"{display_name} · {_detail_label(detail_key)}",
                     value=_short_text(detail.get("calc_method") or detail_key or display_name, 120),
                     meaning=_short_text(detail.get("interpretation") or "", 420),
-                    source=f"interpretations/{method_key}/{detail_key}",
+                    source=research_source_label(method_key, detail_key),
                 )
 
     query = " ".join(part for part in query_parts if str(part or "").strip())
     if query:
         try:
-            memory_hits = store.search_memory(query, corpus=None, limit=max(8, limit * 2))
+            memory_hits = store.search_memory(
+                query,
+                corpora=active_corpora,
+                limit=max(8, limit * 2),
+            )
         except Exception:
             memory_hits = []
         outline_hits = [hit for hit in memory_hits if str(hit.get("artifact_type") or "").strip().lower() == "book_outline"]
@@ -294,8 +370,17 @@ class ComparisonEngine:
         hebrew_birthdate: Optional[Dict[str, int]] = None,
     ) -> Dict[str, object]:
         store = KnowledgeStore()
-        methods = self.registry.list_methods(research_only=True)
-        self.approval_store.merge_methods(methods)
+        methods = self.registry.refresh()
+        methods = [
+            method
+            for method in methods
+            if method.get("enabled_for_research", True)
+        ]
+        self.approval_store.merge_methods(
+            method
+            for method in methods
+            if not method.get("internal_only")
+        )
 
         rendered_methods: List[Dict[str, object]] = []
         for method in methods:
@@ -314,26 +399,36 @@ class ComparisonEngine:
                 str(method["key"]),
                 default=bool(method.get("enabled_for_customers", False)),
             )
+            method_result["resolved_adapter"] = adapter.__class__.__name__
+            method_result["resolved_corpus"] = str(getattr(adapter, "_corpus", "") or method.get("key") or "")
             method_result["result"] = result
             rendered_methods.append(method_result)
 
-        pythagorean_result = next(
+        baseline_result = next(
             (
                 method.get("result", {})
                 for method in rendered_methods
-                if method.get("key") == "pythagorean_existing"
+                if method.get("key") == INTERNAL_BASELINE_KEY
             ),
             {},
         )
-        pythagorean_sections = [
+        baseline_sections = [
             section
-            for section in list(pythagorean_result.get("report_sections") or [])
-            if str(section.get("key") or "").strip().lower() not in {"next_step", "next step", "השלב הבא"}
+            for section in list(baseline_result.get("report_sections") or [])
+            if str(section.get("key") or "").strip().lower() not in {"next_step", "next step"}
         ]
+        public_methods = [
+            method
+            for method in rendered_methods
+            if not method.get("internal_only") and method.get("visible_in_research_ui", True)
+        ]
+        active_alias_map = _build_alias_to_key(public_methods)
+        active_corpora = sorted(active_alias_map.keys())
         book_evidence_sections = _build_book_evidence_sections(
             store=store,
-            rendered_methods=rendered_methods,
-            pythagorean_result=pythagorean_result,
+            rendered_methods=public_methods,
+            active_corpora=active_corpora,
+            pythagorean_result=baseline_result,
             first_name=first_name,
             last_name=last_name,
             day=day,
@@ -351,7 +446,7 @@ class ComparisonEngine:
                     "label": row_label,
                     "values": {
                         method["key"]: method["result"]["metrics"].get(row_key, "-")
-                        for method in rendered_methods
+                        for method in public_methods
                     },
                 }
             )
@@ -366,18 +461,16 @@ class ComparisonEngine:
                 "gender": gender,
                 "hebrew_birthdate": hebrew_birthdate or {},
             },
-            "methods": rendered_methods,
+            "methods": public_methods,
             "rows": comparison_rows,
-            "report_sections": pythagorean_sections + book_evidence_sections,
+            "report_sections": baseline_sections + book_evidence_sections,
             "report_summary": {
-                **dict(pythagorean_result.get("report_summary") or {}),
+                **dict(baseline_result.get("report_summary") or {}),
                 "book_evidence_count": len(book_evidence_sections),
                 "book_evidence_corpora": sorted({
-                    str(section.get("source") or "").split("/")[1]
-                    if str(section.get("source") or "").startswith("interpretations/")
-                    else str(section.get("source") or "").strip()
+                    _source_to_corpus_key(section.get("source"), active_alias_map)
                     for section in book_evidence_sections
-                    if str(section.get("source") or "").strip()
+                    if _source_to_corpus_key(section.get("source"), active_alias_map)
                 }),
             },
         }

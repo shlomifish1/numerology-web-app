@@ -34,5 +34,5 @@ ENV/
 # Project Specific
 save_data/
 credentials.json
-replay_pid*.log
-*.spec
+credentials_old.json
+tok

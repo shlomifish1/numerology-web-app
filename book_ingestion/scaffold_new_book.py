@@ -74,6 +74,7 @@ from book_ingestion.grouping_detector import (  # noqa: E402
     force_multiple_books,
     _collect_pdfs,
 )
+from interpretation_layout import research_book_dir  # noqa: E402
 
 # BookIngestionRunner is imported lazily in phase_b() so that Phase A works
 # even if some optional dependency (fitz, etc.) is missing.
@@ -219,7 +220,7 @@ def _print_grouping_preview(
         book = result.books[0]
         print(f"  Book         : {book_name_he}")
         print(f"  Calculator ID: {calculator_id}")
-        resolved_outdir = outdir or (_NRG_DIR / "interpretations" / book_name_he)
+        resolved_outdir = outdir or research_book_dir(book_name_he)
         print(f"  Output dir   : {resolved_outdir}")
         print()
         print("  File order:")
@@ -349,6 +350,21 @@ def _build_reviewed_catalog_stub(
             # ── invariants ───────────────────────────────────────────────
             "enabled_in_full_map": False,
             "needs_review":        True,
+            "formula_text":        entry.get("formula_text", ""),
+            "formula_steps":       entry.get("formula_steps", []),
+            "interpretation":      entry.get("interpretation", ""),
+            "interpretation_excerpt": entry.get("interpretation_excerpt", ""),
+            "interpretations_by_value": entry.get("interpretations_by_value", {}),
+            "result_values":       entry.get("result_values", []),
+            "allowed_result_values": entry.get("allowed_result_values", []),
+            "input_dependencies":  entry.get("input_dependencies", []),
+            "required_inputs":     entry.get("required_inputs", []),
+            "optional_inputs":     entry.get("optional_inputs", []),
+            "ambiguous_inputs":    entry.get("ambiguous_inputs", []),
+            "chapter_ref":         entry.get("chapter_ref", ""),
+            "source_refs":         entry.get("source_refs", []),
+            "source_excerpt":      entry.get("source_excerpt", ""),
+            "short_explanation":   entry.get("short_explanation", ""),
             # ── draft reference data (read-only for reviewer) ────────────
             "_draft_ref": {
                 "evidence_count":               entry.get("evidence_count", 0),
@@ -357,6 +373,14 @@ def _build_reviewed_catalog_stub(
                 "optional_inputs":              entry.get("optional_inputs", []),
                 "ambiguous_inputs":             entry.get("ambiguous_inputs", []),
                 "source_excerpt":               entry.get("source_excerpt", ""),
+                "formula_text":                 entry.get("formula_text", ""),
+                "formula_steps":                entry.get("formula_steps", []),
+                "interpretation":               entry.get("interpretation", ""),
+                "interpretations_by_value":     entry.get("interpretations_by_value", {}),
+                "result_values":                entry.get("result_values", []),
+                "allowed_result_values":        entry.get("allowed_result_values", []),
+                "chapter_ref":                  entry.get("chapter_ref", ""),
+                "source_refs":                  entry.get("source_refs", []),
                 "confidence":                   entry.get("confidence", 0.0),
                 "extraction_quality":           entry.get("extraction_quality", ""),
                 "missing_formula":              entry.get("missing_formula", True),
@@ -667,7 +691,7 @@ def phase_b(
 
     # ── Resolve output directory ──────────────────────────────────────────
     resolved_outdir: Path = (
-        outdir if outdir else (_NRG_DIR / "interpretations" / book_name_he)
+        outdir if outdir else research_book_dir(book_name_he)
     )
 
     # ── Check for PDF merge capability ───────────────────────────────────
@@ -957,7 +981,7 @@ def run_phase_b_api(
 
     book_candidate: BookCandidate = result.books[0]
     source_files: List[Path] = book_candidate.files
-    resolved_outdir: Path = outdir if outdir else (_NRG_DIR / "interpretations" / book_name_he)
+    resolved_outdir: Path = outdir if outdir else research_book_dir(book_name_he)
 
     # ── PDF merge availability ────────────────────────────────────────────────
     needs_merge = len(source_files) > 1
@@ -1188,7 +1212,7 @@ def main() -> None:
         default=None,
         help=(
             "Output directory for artifacts. "
-            "Default: interpretations/<book_name_he>/ inside NumerologyReportGenerator."
+            "Default: interpretations/research/<book_name_he>/ inside NumerologyReportGenerator."
         ),
     )
     parser.add_argument(

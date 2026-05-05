@@ -6,6 +6,7 @@ import datetime
 import personal_y  # Assuming this module contains This_Year class and its methods
 import name  # Assuming this module contains NamesData class and its methods
 from name_gematria_green import MASTER_MEANINGS as GREEN_MASTER_MEANINGS, NamesDataGreen
+from interpretation_layout import runtime_interpretation_file_candidates
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller. """
@@ -254,21 +255,23 @@ class NumerologyCalculator:
 
         def try_read_file(folder_name, file_suffix, current_category, current_file_name_part_to_try):
             current_file_name = f"{current_file_name_part_to_try}{file_suffix}.txt"
-            if current_category in nested_interpretation_categories:
-                relative_path = os.path.join("interpretations", folder_name, "interpretations",
-                                             current_category, current_file_name)
-            else:
-                relative_path = os.path.join("interpretations", folder_name, current_category,
-                                             current_file_name)
-
-            path_to_check = resource_path(relative_path)
-            try:
-                with open(path_to_check, 'r', encoding='utf-8') as f:
-                    return f.read().strip(), path_to_check
-            except FileNotFoundError:
-                return None, path_to_check
-            except Exception as e:
-                return f"[שגיאה בקריאת קובץ פרשנות {path_to_check}: {e}]", path_to_check
+            candidate_paths = runtime_interpretation_file_candidates(
+                folder_name,
+                current_category,
+                current_file_name,
+                nested=current_category in nested_interpretation_categories,
+            )
+            last_path = str(candidate_paths[0]) if candidate_paths else current_file_name
+            for path_to_check in candidate_paths:
+                try:
+                    with open(path_to_check, 'r', encoding='utf-8') as f:
+                        return f.read().strip(), str(path_to_check)
+                except FileNotFoundError:
+                    last_path = str(path_to_check)
+                    continue
+                except Exception as e:
+                    return f"[interpretation file read error: {path_to_check}: {e}]", str(path_to_check)
+            return None, last_path
 
         candidate_specs = [
             (gender_folder_actual, suffix),

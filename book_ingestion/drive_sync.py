@@ -7,6 +7,7 @@ import json
 import os
 import pickle
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -28,29 +29,147 @@ GOOGLE_EXPORTS = {
 }
 
 
+class DriveAuthRequiredError(RuntimeError):
+    """Raised when OAuth authorization is required before Drive sync can run."""
+
+
 class DriveSync:
     def __init__(self) -> None:
         self.creds = None
         self.service = None
 
-    def authenticate(self) -> None:
-        if TOKEN_FILE.exists():
-            with TOKEN_FILE.open("rb") as token:
-                self.creds = pickle.load(token)
+    def _resolve_token_file(self) -> Path:
+        token_file_raw = str(os.getenv("GOOGLE_DRIVE_TOKEN_FILE", "")).strip()
+        return Path(token_file_raw).expanduser() if token_file_raw else TOKEN_FILE
+
+    def _resolve_credentials_file(self) -> Path:
+        credentials_candidates: list[Path] = []
+        explicit_credentials = str(os.getenv("GOOGLE_DRIVE_CREDENTIALS_FILE", "")).strip()
+        if explicit_credentials:
+            credentials_candidates.append(Path(explicit_credentials).expanduser())
+        credentials_candidates.append(CREDENTIALS_FILE)
+        credentials_candidates.append(BASE_DIR.parent / "credentials.json")
+
+        credentials_file = next((candidate for candidate in credentials_candidates if candidate.exists()), None)
+        if not credentials_file:
+            looked_in = ", ".join(str(candidate) for candidate in credentials_candidates)
+            raise FileNotFoundError(
+                "Google Drive credentials file not found. "
+                f"Looked in: {looked_in}. "
+                "Set GOOGLE_DRIVE_CREDENTIALS_FILE to the correct path."
+            )
+        return credentials_file
+
+    def _resolve_oauth_state_file(self, token_file: Path) -> Path:
+        return token_file.with_name(token_file.name + ".oauth_state.json")
+
+    @staticmethod
+    def _write_token(token_file: Path, creds) -> None:
+        token_file.parent.mkdir(parents=True, exist_ok=True)
+        with token_file.open("wb") as token:
+            pickle.dump(creds, token)
+
+    def authenticate(self, *, interactive: bool = False) -> None:
+        token_file = self._resolve_token_file()
+        credentials_file = self._resolve_credentials_file()
+
+        self.creds = None
+        if token_file.exists():
+            try:
+                with token_file.open("rb") as token:
+                    self.creds = pickle.load(token)
+            except Exception:
+                self.creds = None
 
         if not self.creds or not getattr(self.creds, "valid", False):
             if self.creds and getattr(self.creds, "expired", False) and getattr(self.creds, "refresh_token", None):
                 self.creds.refresh(Request())
+                self._write_token(token_file, self.creds)
+            elif interactive:
+                flow = InstalledAppFlow.from_client_secrets_file(str(credentials_file), SCOPES)
+                self.creds = flow.run_local_server(port=0, open_browser=True)
+                self._write_token(token_file, self.creds)
             else:
-                if not CREDENTIALS_FILE.exists():
-                    raise FileNotFoundError(f"Google Drive credentials file not found: {CREDENTIALS_FILE}")
-                flow = InstalledAppFlow.from_client_secrets_file(str(CREDENTIALS_FILE), SCOPES)
-                self.creds = flow.run_local_server(port=0)
-
-            with TOKEN_FILE.open("wb") as token:
-                pickle.dump(self.creds, token)
+                raise DriveAuthRequiredError(
+                    "Google Drive authorization is required. "
+                    "Start OAuth first and then retry sync."
+                )
 
         self.service = build("drive", "v3", credentials=self.creds)
+
+    def begin_oauth_web_flow(self, callback_url: str) -> Dict[str, Any]:
+        callback = str(callback_url or "").strip()
+        if not callback:
+            raise ValueError("callback_url is required")
+        credentials_file = self._resolve_credentials_file()
+        token_file = self._resolve_token_file()
+        state_file = self._resolve_oauth_state_file(token_file)
+
+        flow = InstalledAppFlow.from_client_secrets_file(str(credentials_file), SCOPES)
+        flow.redirect_uri = callback
+        authorization_url, state = flow.authorization_url(
+            access_type="offline",
+            prompt="consent",
+        )
+
+        payload = {
+            "state": state,
+            "redirect_uri": callback,
+            "credentials_file": str(credentials_file),
+            "created_at": datetime.utcnow().isoformat() + "Z",
+            "code_verifier": str(getattr(flow, "code_verifier", "") or ""),
+        }
+        state_file.parent.mkdir(parents=True, exist_ok=True)
+        state_file.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return {
+            "authorization_url": authorization_url,
+            "state": state,
+            "state_file": str(state_file),
+            "token_file": str(token_file),
+        }
+
+    def complete_oauth_web_flow(self, authorization_response_url: str) -> Dict[str, Any]:
+        callback_response = str(authorization_response_url or "").strip()
+        if not callback_response:
+            raise ValueError("authorization_response_url is required")
+
+        token_file = self._resolve_token_file()
+        state_file = self._resolve_oauth_state_file(token_file)
+        if not state_file.exists():
+            raise DriveAuthRequiredError("OAuth state file is missing. Start OAuth flow again.")
+
+        payload = json.loads(state_file.read_text(encoding="utf-8") or "{}")
+        state = str(payload.get("state") or "").strip()
+        redirect_uri = str(payload.get("redirect_uri") or "").strip()
+        credentials_file = Path(str(payload.get("credentials_file") or "").strip() or self._resolve_credentials_file())
+
+        flow = InstalledAppFlow.from_client_secrets_file(
+            str(credentials_file),
+            SCOPES,
+            state=state or None,
+        )
+        if redirect_uri:
+            flow.redirect_uri = redirect_uri
+        code_verifier = str(payload.get("code_verifier") or "").strip()
+        if code_verifier:
+            flow.code_verifier = code_verifier
+        # Google may return previously granted scopes for the same client.
+        # Pass scope=None at token exchange time to avoid strict scope equality failures.
+        flow.fetch_token(authorization_response=callback_response, scope=None)
+
+        self.creds = flow.credentials
+        self._write_token(token_file, self.creds)
+        try:
+            state_file.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+        self.service = build("drive", "v3", credentials=self.creds)
+        return {
+            "token_file": str(token_file),
+            "expiry": str(getattr(self.creds, "expiry", "") or ""),
+            "scopes": list(getattr(self.creds, "scopes", []) or []),
+        }
 
     @staticmethod
     def parse_folder_id(folder_ref: str) -> str:

@@ -95,6 +95,21 @@ def _normalize_subject_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
     if letter:
         normalized["letter"] = letter
 
+    # Keep additional internal research inputs (Hebrew aliases/custom keys)
+    # without overriding canonical normalized fields above.
+    for key, value in payload.items():
+        if key in normalized:
+            continue
+        if value is None:
+            continue
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped == "":
+                continue
+            normalized[key] = stripped
+            continue
+        normalized[key] = value
+
     return normalized
 
 

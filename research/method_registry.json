@@ -1,123 +1,28 @@
 {
-  "ספר_הנומרולוגיה_השלם": {
-    "key": "ספר_הנומרולוגיה_השלם",
-    "folder": "ספר הנומרולוגיה השלם",
-    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\ספר הנומרולוגיה השלם",
-    "display_name": "ספר הנומרולוגיה השלם",
-    "adapter": "green",
-    "enabled_for_research": true,
-    "enabled_for_customers": false,
-    "added_at": 1773432410.7247958,
-    "notes": ""
-  },
-  "pythagorean_existing": {
-    "key": "pythagorean_existing",
+  "legacy_runtime_internal": {
+    "key": "legacy_runtime_internal",
     "folder": null,
     "folder_path": null,
-    "display_name": "שיטת פיתגורס (קיימת)",
-    "adapter": "pythagorean",
+    "display_name": "Internal Base Map",
+    "adapter": "legacy_runtime",
     "enabled_for_research": true,
-    "enabled_for_customers": true,
+    "enabled_for_customers": false,
+    "internal_only": true,
+    "visible_in_research_ui": false,
     "added_at": 0,
-    "notes": "מסתמכת על name.py ו-numerology_calculator.py ללא שינוי."
-  },
-  "נומרולוגיה_לחישוב_עצמאי_אסתי_גוטמן_חוטר_גזע": {
-    "key": "נומרולוגיה_לחישוב_עצמאי_אסתי_גוטמן_חוטר_גזע",
-    "folder": "נומרולוגיה לחישוב עצמאי אסתי גוטמן חוטר גזע",
-    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\נומרולוגיה לחישוב עצמאי אסתי גוטמן חוטר גזע",
-    "display_name": "נומרולוגיה לחישוב עצמאי אסתי גוטמן חוטר גזע",
-    "adapter": "generic",
-    "enabled_for_research": true,
-    "enabled_for_customers": false,
-    "added_at": 1773944198.0122347,
-    "notes": ""
-  },
-  "נומרולוגיה_של_האלף_השלישי": {
-    "key": "נומרולוגיה_של_האלף_השלישי",
-    "folder": "נומרולוגיה של האלף השלישי",
-    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\נומרולוגיה של האלף השלישי",
-    "display_name": "נומרולוגיה של האלף השלישי",
-    "adapter": "generic",
-    "enabled_for_research": true,
-    "enabled_for_customers": false,
-    "added_at": 1773944198.0152361,
-    "notes": ""
-  },
-  "נומרולוגיה_בתיווך_האסטרולוגיה": {
-    "key": "נומרולוגיה_בתיווך_האסטרולוגיה",
-    "folder": "נומרולוגיה בתיווך האסטרולוגיה",
-    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\נומרולוגיה בתיווך האסטרולוגיה",
-    "display_name": "נומרולוגיה בתיווך האסטרולוגיה",
-    "adapter": "generic",
-    "enabled_for_research": true,
-    "enabled_for_customers": false,
-    "added_at": 1774097450.4260108,
-    "notes": ""
+    "notes": "Backed by the existing men/women engine without changes."
   },
   "לי_ברגמן_שרה_ברק_אלי_מורג_נומרולוגיה": {
     "key": "לי_ברגמן_שרה_ברק_אלי_מורג_נומרולוגיה",
     "folder": "לי ברגמן שרה ברק אלי מורג נומרולוגיה",
-    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\לי ברגמן שרה ברק אלי מורג נומרולוגיה",
+    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\research\\לי ברגמן שרה ברק אלי מורג נומרולוגיה",
     "display_name": "לי ברגמן שרה ברק אלי מורג נומרולוגיה",
     "adapter": "generic",
     "enabled_for_research": true,
     "enabled_for_customers": false,
-    "added_at": 1774097614.1832404,
-    "notes": ""
-  },
-  "נומרולוגיה_לילי_רוזנפלד": {
-    "key": "נומרולוגיה_לילי_רוזנפלד",
-    "folder": "נומרולוגיה לילי רוזנפלד",
-    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\נומרולוגיה לילי רוזנפלד",
-    "display_name": "נומרולוגיה לילי רוזנפלד",
-    "adapter": "generic",
-    "enabled_for_research": true,
-    "enabled_for_customers": false,
-    "added_at": 1774097610.419591,
-    "notes": ""
-  },
-  "נומרולוגיה_מעשית_אורלי_רוזנברג": {
-    "key": "נומרולוגיה_מעשית_אורלי_רוזנברג",
-    "folder": "נומרולוגיה מעשית אורלי רוזנברג",
-    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\נומרולוגיה מעשית אורלי רוזנברג",
-    "display_name": "נומרולוגיה מעשית אורלי רוזנברג",
-    "adapter": "generic",
-    "enabled_for_research": true,
-    "enabled_for_customers": false,
-    "added_at": 1774098094.6798573,
-    "notes": ""
-  },
-  "men": {
-    "key": "men",
-    "folder": "men",
-    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\men",
-    "display_name": "men",
-    "adapter": "generic",
-    "enabled_for_research": true,
-    "enabled_for_customers": true,
-    "added_at": 1773944192.7900782,
-    "notes": ""
-  },
-  "women": {
-    "key": "women",
-    "folder": "women",
-    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\women",
-    "display_name": "women",
-    "adapter": "generic",
-    "enabled_for_research": true,
-    "enabled_for_customers": true,
-    "added_at": 1774095010.8462117,
-    "notes": ""
-  },
-  "הקוד_השנתי": {
-    "key": "הקוד_השנתי",
-    "folder": "הקוד השנתי",
-    "folder_path": "C:\\Users\\fishman-ai-server\\Desktop\\ai_agents\\NumerologyReportGenerator\\interpretations\\הקוד השנתי",
-    "display_name": "הקוד השנתי",
-    "adapter": "generic",
-    "enabled_for_research": true,
-    "enabled_for_customers": false,
-    "added_at": 1774249913.2795248,
+    "internal_only": false,
+    "visible_in_research_ui": true,
+    "added_at": 1775514704.0351844,
     "notes": ""
   }
 }

@@ -6,6 +6,7 @@ import csv
 import html
 import json
 import os
+import logging
 import re
 import shutil
 import sys
@@ -76,6 +77,28 @@ def _extend_legacy_paths() -> None:
 
 _extend_legacy_paths()
 
+logger = logging.getLogger(__name__)
+
+
+def _suppress_windows_error_dialogs() -> None:
+    """Prevent Windows from showing crash popups for child OCR processes."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        SEM_FAILCRITICALERRORS = 0x0001
+        SEM_NOGPFAULTERRORBOX = 0x0002
+        SEM_NOOPENFILEERRORBOX = 0x8000
+        ctypes.windll.kernel32.SetErrorMode(
+            SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX
+        )
+    except Exception:
+        # Best effort only; OCR flow still continues.
+        return
+
+
+_suppress_windows_error_dialogs()
+
 try:
     from PyPDF2 import PdfReader
     PYPDF2_AVAILABLE = True
@@ -105,6 +128,8 @@ class OCREngine:
         self.language = language
         self.tessdata_dir = _ocr_root() / 'tessdata'
         self.tesseract_cmd = self._discover_tesseract_cmd()
+        self.tesseract_timeout_sec = max(5, int(os.environ.get("NUMEROLOGY_TESSERACT_TIMEOUT_SEC", "20") or "20"))
+        _suppress_windows_error_dialogs()
         if self.tessdata_dir.exists():
             os.environ['TESSDATA_PREFIX'] = str(self.tessdata_dir)
         if TESSERACT_PYTHON_AVAILABLE and self.tesseract_cmd:
@@ -743,7 +768,9 @@ class OCREngine:
             for index, page in enumerate(document[:3], start=1):
                 pix = page.get_pixmap(dpi=180)
                 image = Image.frombytes('RGB', (pix.width, pix.height), pix.samples)
-                snippets.append(pytesseract.image_to_string(image, lang=self.language))
+                text = self._safe_tesseract_image_to_string(image)
+                if text.strip():
+                    snippets.append(text)
             text = '\n'.join(part.strip() for part in snippets if part.strip())
             return {
                 'status': 'ocr_extracted' if text else 'ocr_pending',
@@ -756,7 +783,7 @@ class OCREngine:
     def _inspect_image(self, path: Path) -> Dict[str, object]:
         if self._can_run_ocr() and Image is not None:
             try:
-                text = pytesseract.image_to_string(Image.open(path), lang=self.language).strip()
+                text = self._safe_tesseract_image_to_string(Image.open(path)).strip()
                 return {
                     'status': 'ocr_extracted' if text else 'ocr_empty',
                     'text': text,
@@ -768,3 +795,25 @@ class OCREngine:
 
     def _can_run_ocr(self) -> bool:
         return bool(TESSERACT_PYTHON_AVAILABLE and self.tesseract_cmd and FITZ_AVAILABLE and Image is not None)
+
+    def _safe_tesseract_image_to_string(self, image, config: str | None = None) -> str:
+        """Run tesseract in a guarded mode to avoid breaking the whole extraction flow."""
+        if not self._can_run_ocr():
+            return ''
+        try:
+            kwargs = {'lang': self.language, 'timeout': self.tesseract_timeout_sec}
+            if config:
+                kwargs['config'] = config
+            return str(pytesseract.image_to_string(image, **kwargs) or '')
+        except TypeError:
+            # Older pytesseract versions may not support timeout kwarg.
+            try:
+                if config:
+                    return str(pytesseract.image_to_string(image, lang=self.language, config=config) or '')
+                return str(pytesseract.image_to_string(image, lang=self.language) or '')
+            except Exception as exc:
+                logger.warning("tesseract OCR failed (compat mode): %s", exc)
+                return ''
+        except Exception as exc:
+            logger.warning("tesseract OCR failed: %s", exc)
+            return ''

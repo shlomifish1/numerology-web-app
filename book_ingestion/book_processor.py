@@ -190,6 +190,10 @@ class BookProcessor:
         if not candidates:
             return title or source_path.stem or source_path.name
 
+        normalized_stem = re.sub(r'\s+', ' ', str(source_path.stem or '')).strip()
+        if self._looks_like_section_title(normalized_stem):
+            return normalized_stem
+
         return max(candidates, key=lambda candidate: self._title_score(candidate, source_path))
 
     def _folder_title_from_source_path(self, source_path: Path) -> Optional[str]:
@@ -226,6 +230,21 @@ class BookProcessor:
             return True
         return False
 
+    def _looks_like_section_title(self, name: str) -> bool:
+        normalized = re.sub(r'\s+', ' ', str(name or '')).strip().lower()
+        if not normalized:
+            return False
+        if any(token in normalized for token in ('scan', 'ocr', 'page', 'עמוד')):
+            return False
+        if re.match(r'^\d+[\s._-]*\D+', normalized):
+            tokens = [token for token in re.findall(r'[\w\u0590-\u05FF]+', normalized) if token and not token.isdigit()]
+            return len(tokens) >= 2 or (len(tokens) == 1 and len(tokens[0]) >= 4)
+        if re.match(r'^\d+[\s._-]+', normalized):
+            return True
+        if any(token in normalized for token in ('chapter', 'section', 'topic', 'subject', 'part', 'פרק', 'נושא', 'חלק')):
+            return True
+        return False
+
     def _title_score(self, candidate: str, source_path: Path) -> int:
         text = re.sub(r'\s+', ' ', str(candidate or '')).strip()
         if not text:
@@ -243,16 +262,47 @@ class BookProcessor:
         if any(token in lower for token in ('final_schema', 'strict_schema', 'normalized', 'json', 'pdf', 'scan')):
             score -= 15
         if source_path.parent.name and text == source_path.parent.name:
-            score += 6
+            score += 2
+            if self._looks_like_section_title(source_path.stem):
+                score -= 8
         if text == source_path.stem:
-            score -= 2
+            score += 4
+            if self._looks_like_section_title(text):
+                score += 8
         if any(token in text for token in ('ספר', 'נומרולוג', 'אסטרולוג')):
             score += 8
         return score
 
     def _should_skip(self, path: Path) -> bool:
         name = path.name.lower()
-        return name.endswith('_books.md') or name.endswith('_category_map.md') or name.endswith('_ocr_queue.md') or name.endswith('_runtime.md') or name.endswith('_seed_plan.md') or name.endswith('_taxonomy.md') or name.endswith('_intake.md')
+        parts = {part.lower() for part in path.parts}
+        generated_suffixes = (
+            '_books.md',
+            '_category_map.md',
+            '_ocr_queue.md',
+            '_runtime.md',
+            '_seed_plan.md',
+            '_taxonomy.md',
+            '_intake.md',
+            '__source_manifest.json',
+            '__source_corpus.txt',
+            '__chapter_inventory.json',
+            '__calc_candidates.json',
+            '__draft_catalog.json',
+            '__reviewed_catalog.json',
+            '__definition_candidate.json',
+            '__review_report.json',
+            '__ocr_quality_report.json',
+        )
+        if 'artifacts' in parts:
+            return True
+        if any(name.endswith(suffix) for suffix in generated_suffixes):
+            return True
+        if '__' in name and path.suffix.lower() in {'.json', '.txt', '.md'}:
+            return True
+        if name in {'manifest.json'}:
+            return True
+        return False
 
     def _extract_outline(self, title: str, text: str) -> Dict[str, object]:
         cleaned_text = re.sub(r'\r\n?', '\n', str(text or ''))

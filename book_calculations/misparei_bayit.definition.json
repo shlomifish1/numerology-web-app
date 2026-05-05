@@ -1,0 +1,263 @@
+{
+  "book_id": "misparei_bayit",
+  "book_title": "מספרי בית",
+  "definition_version": "2026-03-25.pilot.v1",
+  "source_artifacts": {
+    "definition_candidate": "interpretations/מספרי בית/מספרי בית__definition_candidate.json",
+    "reviewed_catalog": "interpretations/מספרי בית/מספרי בית__reviewed_catalog.json",
+    "review_report": "interpretations/מספרי בית/מספרי בית__review_report.json"
+  },
+  "scope_note": "Pilot calculator for the reviewed formulas only. No production switch. No second book.",
+  "calculations": [
+    {
+      "calc_key": "house_number_basic",
+      "label_he": "מספר הבית — שיטה 1 (מספר הדירה בלבד)",
+      "short_explanation": "צמצום מספר הדירה לספרה בסיסית 1-9 באמצעות סכימת ספרות חוזרת.",
+      "status": "computable_with_trace",
+      "execution": {
+        "method": "house_number_basic"
+      },
+      "input_metadata": {
+        "required_inputs": [
+          "apartment_number"
+        ],
+        "optional_inputs": [],
+        "inherited_context_inputs": [],
+        "input_labels_he": {
+          "apartment_number": "מספר דירה"
+        },
+        "input_help_text": {
+          "apartment_number": "המספר הרשמי של הדירה (למשל 24)."
+        },
+        "input_activation_rules": [
+          {
+            "when_calc_selected": "house_number_basic",
+            "activate_inputs": [
+              "apartment_number"
+            ]
+          }
+        ],
+        "available_for_runtime": true
+      },
+      "formula_text": "reduce_digits(apartment_number)",
+      "formula_steps": [
+        "קבלת מספר הדירה.",
+        "פירוק לספרות.",
+        "סכימת הספרות.",
+        "חזרה על צמצום עד תוצאה בטווח 1-9."
+      ],
+      "reduction_rules": {
+        "target_range": "1-9",
+        "preserve_master_numbers": false
+      },
+      "allowed_result_values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "interpretations_by_value": {},
+      "interpretation_status": "table_exists_in_source_but_value_text_not_extracted_in_reviewed_candidate",
+      "source_refs": [
+        "definition_candidate:house_number_basic",
+        "review_report:key_formulas.method_1",
+        "pages:2-5"
+      ],
+      "needs_review": {
+        "is_open": false,
+        "notes": []
+      }
+    },
+    {
+      "calc_key": "house_number_address",
+      "label_he": "מספר הבית — שיטה 2 (כתובת מלאה)",
+      "short_explanation": "שיטה משולבת כתובת+דירה קיימת במקור אך נוסחת היישום המדויקת עדיין לא סגורה.",
+      "status": "needs_review",
+      "reason_bucket": "blocked_ambiguous_formula",
+      "execution": {},
+      "input_metadata": {
+        "required_inputs": [
+          "apartment_number",
+          "street_number"
+        ],
+        "optional_inputs": [
+          "address"
+        ],
+        "inherited_context_inputs": [],
+        "input_labels_he": {
+          "apartment_number": "מספר דירה",
+          "street_number": "מספר רחוב",
+          "address": "כתובת מלאה"
+        },
+        "input_help_text": {
+          "street_number": "טרם הוכרע אם השיטה משתמשת במספר רחוב בלבד או גם בערך שם הרחוב.",
+          "address": "נשמר לבדיקת מחקר בלבד עד לסגירת הנוסחה."
+        },
+        "input_activation_rules": [
+          {
+            "when_calc_selected": "house_number_address",
+            "activate_inputs": [
+              "apartment_number",
+              "street_number",
+              "address"
+            ]
+          }
+        ],
+        "available_for_runtime": false
+      },
+      "formula_text": "",
+      "formula_steps": [],
+      "allowed_result_values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "interpretations_by_value": {},
+      "source_refs": [
+        "definition_candidate:house_number_address",
+        "review_report:key_formulas.method_2"
+      ],
+      "needs_review": {
+        "is_open": true,
+        "notes": [
+          "לא הוכרע אם הערך כולל גימטריה של שם הרחוב או רק מספר רחוב.",
+          "נדרשת הבהרה מחברת הספר לפני הפעלה חישובית."
+        ]
+      }
+    },
+    {
+      "calc_key": "annual_house_frequency",
+      "label_he": "תדר שנת המגורים",
+      "short_explanation": "צמצום השנה, חיבור למספר הבית המצומצם, ואז צמצום חוזר לתדר שנתי 1-9.",
+      "status": "computable_with_trace",
+      "execution": {
+        "method": "annual_house_frequency"
+      },
+      "input_metadata": {
+        "required_inputs": [
+          "apartment_number",
+          "current_year"
+        ],
+        "optional_inputs": [],
+        "inherited_context_inputs": [
+          "house_number_basic"
+        ],
+        "input_labels_he": {
+          "apartment_number": "מספר דירה",
+          "current_year": "שנה נוכחית"
+        },
+        "input_help_text": {
+          "current_year": "השנה עבורה מחשבים את תדר המגורים."
+        },
+        "input_activation_rules": [
+          {
+            "when_calc_selected": "annual_house_frequency",
+            "activate_inputs": [
+              "apartment_number",
+              "current_year"
+            ]
+          }
+        ],
+        "available_for_runtime": true
+      },
+      "formula_text": "reduce_digits(reduce_digits(current_year) + house_number_basic)",
+      "formula_steps": [
+        "פירוק השנה לספרות וסכימתן.",
+        "צמצום סכום השנה לספרה בסיסית.",
+        "חישוב מספר הבית הבסיסי מהדירה.",
+        "חיבור צמצום השנה למספר הבית.",
+        "צמצום חוזר של הסכום לתוצאה בטווח 1-9."
+      ],
+      "reduction_rules": {
+        "target_range": "1-9",
+        "preserve_master_numbers": false
+      },
+      "allowed_result_values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "interpretations_by_value": {},
+      "interpretation_status": "annual_frequency_interpretation_not_extracted_as_value_table",
+      "source_refs": [
+        "definition_candidate:annual_house_frequency",
+        "review_report:key_formulas.annual_frequency",
+        "pages:2-5"
+      ],
+      "needs_review": {
+        "is_open": false,
+        "notes": []
+      }
+    },
+    {
+      "calc_key": "house_weight_system_80_15_5",
+      "label_he": "מערכת משקולות לבית (80%/15%/5%)",
+      "short_explanation": "המשקולות הוזכרו במקור אך לא סופקה נוסחה מלאה ואחידה להפעלה חישובית.",
+      "status": "needs_review",
+      "reason_bucket": "blocked_missing_formula",
+      "execution": {},
+      "input_metadata": {
+        "required_inputs": [
+          "apartment_number",
+          "building_number",
+          "floor_number"
+        ],
+        "optional_inputs": [],
+        "inherited_context_inputs": [],
+        "input_labels_he": {
+          "apartment_number": "מספר דירה",
+          "building_number": "מספר בניין",
+          "floor_number": "מספר קומה"
+        },
+        "input_help_text": {
+          "building_number": "לשימוש עתידי לאחר סגירת הנוסחה המדויקת.",
+          "floor_number": "לשימוש עתידי לאחר סגירת הנוסחה המדויקת."
+        },
+        "input_activation_rules": [
+          {
+            "when_calc_selected": "house_weight_system_80_15_5",
+            "activate_inputs": [
+              "apartment_number",
+              "building_number",
+              "floor_number"
+            ]
+          }
+        ],
+        "available_for_runtime": false
+      },
+      "formula_text": "0.8 * apartment_vibration + 0.15 * building_vibration + 0.05 * floor_vibration",
+      "formula_steps": [],
+      "allowed_result_values": [],
+      "interpretations_by_value": {},
+      "source_refs": [
+        "definition_candidate:discovered_concepts_not_in_catalog.weight_system",
+        "review_report:key_formulas.weight_system",
+        "page:1"
+      ],
+      "needs_review": {
+        "is_open": true,
+        "notes": [
+          "נוסחת ההכרעה הסופית לא הוגדרה במקור כאלגוריתם מלא.",
+          "נדרש אישור מומחה לפני הפעלה חישובית."
+        ]
+      }
+    }
+  ]
+}

@@ -13,8 +13,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from numerology_calculator import NumerologyCalculator
 from config_manager import ConfigManager
 from gpt_report import generate_person_report
-from book_ingestion.book_reader_inspector import render_book_reader_inspector
-from research.streamlit_panel import render_research_panel
+from research.active_book_lab import render_lab_panel, render_live_books_panel
 import personal_y
 
 # --- Page Config ---
@@ -151,6 +150,58 @@ def generate_docx_bytes(calc, gender_key, ai_report_text=None):
     document.save(bio)
     bio.seek(0)
     return bio
+
+
+def _render_runtime_interpretation(calc, category, value, gender_key, **kwargs):
+    if value in (None, ""):
+        st.info("אין ערך מחושב להצגה.")
+        return
+    text = calc.get_interpretation(category, value, gender_key, **kwargs)
+    if isinstance(text, str) and "קובץ פרשנות לא נמצא" in text:
+        st.warning(f"חסר קובץ פרשנות עבור `{category}` בערך `{value}`.")
+        st.caption(text)
+    else:
+        st.write(text)
+
+
+def _render_peak_challenge_grid(calc, gender_key):
+    periods = [
+        ("פסגה ראשונה", calc.peak1_reduced, "אתגר ראשון", calc.challenge1_reduced, f"עד גיל {calc.first_pick_start}"),
+        ("פסגה שניה", calc.peak2_reduced, "אתגר שני", calc.challenge2_reduced, f"מגיל {calc.first_pick_start + 1} עד {calc.second_pick_start - 1}"),
+        ("פסגה שלישית", calc.peak3_reduced, "אתגר שלישי", calc.challenge3_reduced, f"מגיל {calc.second_pick_start} עד {calc.third_pick_start - 1}"),
+        ("פסגה רביעית", calc.peak4_reduced, "אתגר רביעי", calc.challenge4_reduced, f"מגיל {calc.third_pick_start} ואילך"),
+    ]
+
+    for index, (peak_label, peak_value, challenge_label, challenge_value, age_label) in enumerate(periods, start=1):
+        combo_key = f"{peak_value}{challenge_value}" if peak_value is not None and challenge_value is not None else ""
+        st.markdown(f"#### תקופה {index} · {age_label}")
+        col_peak, col_challenge, col_combo = st.columns(3)
+        with col_peak:
+            st.metric(peak_label, peak_value)
+            with st.expander(f"פירוש {peak_label}", expanded=False):
+                _render_runtime_interpretation(calc, "peaks_interpretation", peak_value, gender_key)
+        with col_challenge:
+            st.metric(challenge_label, challenge_value)
+            with st.expander(f"פירוש {challenge_label}", expanded=False):
+                _render_runtime_interpretation(calc, "challenges_interpretation", challenge_value, gender_key)
+        with col_combo:
+            st.metric("שילוב פסגה ואתגר", combo_key or "-")
+            with st.expander("פירוש שילוב", expanded=False):
+                if not combo_key:
+                    st.info("אין שילוב מחושב לתקופה זו.")
+                else:
+                    combo_text = calc.get_interpretation(
+                        "peak_challenge_comb",
+                        combo_key,
+                        gender_key,
+                        is_peak_challenge_comb=True,
+                    )
+                    if isinstance(combo_text, str) and "קובץ פרשנות לא נמצא" in combo_text:
+                        st.warning(f"חסר שילוב מדויק עבור פסגה {peak_value} ואתגר {challenge_value}.")
+                        st.caption(combo_text)
+                    else:
+                        st.write(combo_text)
+        st.divider()
 
 def main():
     # Initialize Config
@@ -370,80 +421,65 @@ def main():
                     type="primary"
                 )
 
-        # Tabs for organization
-        tab1, tab2, tab3 = st.tabs(["ראשי", "פסגות ואתגרים", "משמעויות מורחבות"])
-        
-        with tab1:
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.image("https://img.icons8.com/color/96/numerology.png", width=64)
-                st.metric("מספר ייעוד (גורל)", calc.final_number_destiny)
-                with st.expander("פירוש מספר ייעוד"):
-                    st.write(calc.get_interpretation("destiny", calc.final_number_destiny, gender_key))
+        map_tab, lab_tab, books_tab = st.tabs(["??? ?????", "?????", "?????"])
 
-            with col2:
-                st.metric("שנה אישית", calc.shana_ishit)
-                with st.expander("פירוש שנה אישית"):
-                    st.write(calc.get_interpretation("personal_year", calc.shana_ishit, gender_key))
+        with map_tab:
+            st.caption("???? ?????? ????? ?? ???? ???? ???? men/women ?-runtime.")
+            main_tab, peaks_tab, meanings_tab = st.tabs(["??????", "????? ????? ??????", "????? ??????? ????? ??????"])
 
-            with col3:
-                st.metric("יום לידה", calc.p_day)
-                with st.expander("פירוש יום לידה"):
-                    # Original Day isn't stored in calc object directly as public generic prop easily,
-                    # but we can infer or simpler just show reduced or remove "Original" text if not crucial for now.
-                    # Or we can recalculate/store it. Let's stick to reduced or what we have.
-                    st.write(f"יום לידה/צמצום: {calc.p_day}")
-                    st.write(calc.get_interpretation("birth_day", calc.p_day, gender_key))
+            with main_tab:
+                col1, col2, col3 = st.columns(3)
 
-            st.markdown("### מפה אישית")
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("שם פרטי", calc.first_name_val)
-            c2.metric("שם מלא (שאיפה)", calc.full_name_val)
-            c3.metric("עיצורים (רושם)", calc.itzurim_val)
-            c4.metric("תנועות (נשמה)", calc.aiv_val)
+                with col1:
+                    st.image("https://img.icons8.com/color/96/numerology.png", width=64)
+                    st.metric("???? ?????", calc.final_number_destiny)
+                    with st.expander("????? ???? ?????"):
+                        _render_runtime_interpretation(calc, "destiny", calc.final_number_destiny, gender_key)
 
-        with tab2:
-            st.subheader("פסגות ואתגרים בחיי האדם")
-            
-            peaks_data = [
-                ("תקופה ראשונה", calc.peak1_reduced, calc.challenge1_reduced, f"עד גיל {calc.first_pick_start}"),
-                ("תקופה שנייה", calc.peak2_reduced, calc.challenge2_reduced, f"מגיל {calc.first_pick_start+1} עד {calc.second_pick_start-1}"),
-                ("תקופה שלישית", calc.peak3_reduced, calc.challenge3_reduced, f"מגיל {calc.second_pick_start} עד {calc.third_pick_start-1}"),
-                ("תקופה רביעית", calc.peak4_reduced, calc.challenge4_reduced, f"מגיל {calc.third_pick_start} ואילך"),
-            ]
-            
-            for title, peak, challenge, age in peaks_data:
-                with st.container():
-                    st.markdown(f"#### {title} ({age})")
-                    pc1, pc2 = st.columns(2)
-                    pc1.info(f"**פסגה {peak}**")
-                    
-                    pc2.error(f"**אתגר {challenge}**")
-                    st.divider()
+                with col2:
+                    st.metric("??? ?????", calc.shana_ishit)
+                    with st.expander("????? ??? ?????"):
+                        _render_runtime_interpretation(calc, "personal_year", calc.shana_ishit, gender_key)
 
-        with tab3:
-            st.info("כאן יופיעו ניתוחי עומק נוספים (ריבוע פיתגורס, רבעונים ועוד).")
-            if calc.shana_nisteret:
-                st.write(f"**שנה נסתרת:** {calc.shana_nisteret}")
-                st.write(calc.get_interpretation("hidden_year", str(calc.shana_nisteret), gender_key, is_hidden_year=True))
-    
+                with col3:
+                    st.metric("??? ????", calc.p_day)
+                    with st.expander("????? ??? ????"):
+                        st.write(f"??? ????/?????: {calc.p_day}")
+                        _render_runtime_interpretation(calc, "birth_day", calc.p_day, gender_key)
+
+                st.markdown("### ??? ?????")
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("?? ????", calc.first_name_val)
+                c2.metric("?? ???", calc.full_name_val)
+                c3.metric("????? ??????", calc.itzurim_val)
+                c4.metric("??????", calc.aiv_val)
+
+            with peaks_tab:
+                st.subheader("?????, ?????? ????? ????? ??????")
+                _render_peak_challenge_grid(calc, gender_key)
+
+            with meanings_tab:
+                st.info("??? ?????? ????? ????? ?????? ???? ???? ?-runtime ????.")
+                if calc.shana_nisteret:
+                    st.write(f"**??? ?????:** {calc.shana_nisteret}")
+                    _render_runtime_interpretation(
+                        calc,
+                        "hidden_year",
+                        str(calc.shana_nisteret),
+                        gender_key,
+                        is_hidden_year=True,
+                    )
+
+        with lab_tab:
+            st.caption("?????? ????? ?? ???? ???? ???? ???? interpretations/research.")
+            render_lab_panel(prefix="web_lab", calc=calc)
+
+        with books_tab:
+            st.caption("?????? ?????? ?????? ????? ????? ?????? ????? ??????.")
+            render_live_books_panel(prefix="web_books", calc=calc)
+
     else:
         st.info("הזן פרטים בצד ימין ולחץ על 'בצע חישוב' כדי להתחיל.")
-
-
-    st.markdown("---")
-    with st.expander("📚 אינדקס הספרים", expanded=True):
-        st.caption("תצוגה ישירה של DB האינדוקס שנבנה מהספרים. כאן רואים את טקסט המקור, מצב ה-OCR, והערכים שנוצרו ממנו.")
-        render_book_reader_inspector(prefix="consultant_books")
-
-    with st.expander("מחקר פנימי", expanded=False):
-        render_research_panel(
-            prefix="web_research",
-            embedded=True,
-            title="מחקר נומרולוגי פנימי",
-            caption="פאנל מחקר פנימי עם סיסמה, השוואת שיטות, refresh ל-corpora וניהול אישורים.",
-        )
 
 if __name__ == "__main__":
     main()

@@ -39,15 +39,15 @@ CONCEPT_CATALOG: list[dict[str, Any]] = [
     {"key": "personal_year", "label": "שנה אישית", "patterns": [r"\bpersonal year\b", r"שנה אישית", r"מיצב", r"מצב"]},
     {"key": "hidden_year", "label": "שנה נסתרת", "patterns": [r"שנה נסתרת", r"hidden year", r"נפח"]},
     {"key": "missing", "label": "חסרים", "patterns": [r"חסרים", r"missing", r"חסר", r"חוסר"]},
-    {"key": "beneficial", "label": "חיזוקים", "patterns": [r"חיזוק", r"beneficial", r"טוב", r"מחזק"]},
+    {"key": "beneficial", "label": "חיזוקים", "patterns": [r"חיזוק", r"beneficial", r"מחזק", r"מחזק(?:ת|ים|ות)?", r"מיטיב(?:ה|ים|ות)?"]},
     {"key": "surplus", "label": "עודפים", "patterns": [r"עודף", r"surplus", r"עודפים"]},
     {"key": "challenge", "label": "אתגרים", "patterns": [r"אתגר", r"challenge", r"קשיים"]},
     {"key": "pinnacle", "label": "פסגה", "patterns": [r"פסגה", r"pinnacle"]},
     {"key": "karmic", "label": "קרמטי", "patterns": [r"קרמ", r"karmic", r"חוב"]},
-    {"key": "master", "label": "מספרי מאסטר", "patterns": [r"11", r"22", r"33", r"מספר מאסטר", r"master"]},
-    {"key": "house_number", "label": "מספר בית", "patterns": [r"מספר בית", r"number of house", r"בית"]},
-    {"key": "apartment_number", "label": "מספר דירה", "patterns": [r"מספר דירה", r"apartment number", r"דירה"]},
-    {"key": "address_number", "label": "מספר כתובת", "patterns": [r"מספר כתובת", r"address number", r"כתובת"]},
+    {"key": "master", "label": "מספרי מאסטר", "patterns": [r"\b11\b", r"\b22\b", r"\b33\b", r"מספר מאסטר", r"master"]},
+    {"key": "house_number", "label": "מספר בית", "patterns": [r"מספר בית", r"בית מספר", r"number of house", r"house number"]},
+    {"key": "apartment_number", "label": "מספר דירה", "patterns": [r"מספר\s*דירה", r"מספר\s*הדירה", r"דירה\s*מספר", r"apartment number"]},
+    {"key": "address_number", "label": "מספר כתובת", "patterns": [r"מספר\s*כתובת", r"מספר\s*הכתובת", r"address number", r"כתובת\s*מספר"]},
 ]
 
 
@@ -140,21 +140,27 @@ def _best_book_excerpt(book: Dict[str, Any], chunks: list[str]) -> tuple[str, li
 
 
 def _match_concepts(text: str) -> dict[str, list[str]]:
-    matches: dict[str, list[str]] = defaultdict(list)
+    # Important: do not pre-create keys without actual evidence.
+    # Otherwise every concept appears in draft output even with zero matches.
+    matches: dict[str, list[str]] = {}
     if not text:
         return matches
     for concept in CONCEPT_CATALOG:
+        concept_key = str(concept["key"])
+        concept_matches: list[str] = []
         for pattern in concept["patterns"]:
             for match in re.finditer(pattern, text, flags=re.IGNORECASE):
                 start = max(0, match.start() - 120)
                 end = min(len(text), match.end() + 220)
                 snippet = re.sub(r"\s+", " ", text[start:end]).strip()
-                if snippet and snippet not in matches[concept["key"]]:
-                    matches[concept["key"]].append(snippet[:500])
-                if len(matches[concept["key"]]) >= 3:
+                if snippet and snippet not in concept_matches:
+                    concept_matches.append(snippet[:500])
+                if len(concept_matches) >= 3:
                     break
-            if len(matches[concept["key"]]) >= 3:
+            if len(concept_matches) >= 3:
                 break
+        if concept_matches:
+            matches[concept_key] = concept_matches
     return matches
 
 

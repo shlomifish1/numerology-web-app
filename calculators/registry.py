@@ -4,12 +4,14 @@ from typing import Callable
 
 from calculators.contract import BookCalculatorContract
 from calculators.green_legacy import GreenLegacyCalculator
+from calculators.misparei_bayit import MispareiBayitCalculator
 from calculators.sefer_hanumerologia_hashalem import SeferHanumerologiaHashalemCalculator
 
 DEFAULT_CALCULATOR_ID = "green_legacy"
 
 _FACTORY_BY_ID: dict[str, Callable[[], BookCalculatorContract]] = {
     DEFAULT_CALCULATOR_ID: GreenLegacyCalculator,
+    "misparei_bayit": MispareiBayitCalculator,
     "sefer_hanumerologia_hashalem": SeferHanumerologiaHashalemCalculator,
 }
 

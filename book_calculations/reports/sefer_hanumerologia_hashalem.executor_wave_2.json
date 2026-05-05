@@ -1,0 +1,90 @@
+{
+  "generated_at": "2026-03-25T16:56:58.123720+00:00",
+  "book_id": "sefer_hanumerologia_hashalem",
+  "definition_version_before": "1.1.0",
+  "definition_version_after": "1.2.0",
+  "sample_payload": {
+    "full_name": "דני כהן",
+    "birth_date": "1990-05-17",
+    "current_year": 2029,
+    "letter": "א"
+  },
+  "metrics_before": {
+    "computable_with_trace": 92,
+    "unsupported_executor_type": 157,
+    "computed_with_interpretation": 46
+  },
+  "metrics_after": {
+    "computable_with_trace": 109,
+    "unsupported_executor_type": 140,
+    "computed_with_interpretation": 55
+  },
+  "executor_families_implemented": [
+    "civil_birthdate_reduction_aliases",
+    "civil_date_component_extractors",
+    "name_structure_analysis",
+    "nine_year_cycle_position"
+  ],
+  "promoted_calculations": [
+    "calculate_life_cycle_position",
+    "karma_number",
+    "letter_repetition",
+    "periodic_influences",
+    "source_chapter_14",
+    "source_chapter_17",
+    "source_chapter_19",
+    "בדיקת_עודף_ספרות",
+    "בדיקת_קיום_ספרות_בשם_המלא",
+    "חודש_לידה_אזרחי",
+    "חישוב_מספר_הלידה",
+    "מספר_לידה_אזרחי",
+    "סכום_העיצורים_בשם",
+    "סכום_התנועות_בשם",
+    "שיעור_החיים_האזרחי",
+    "תקופת_המחזור_הראשון",
+    "תקופת_המחזור_השני"
+  ],
+  "promoted_calculations_computed_in_sample": [
+    "calculate_life_cycle_position",
+    "karma_number",
+    "letter_repetition",
+    "periodic_influences",
+    "source_chapter_14",
+    "source_chapter_17",
+    "source_chapter_19",
+    "בדיקת_עודף_ספרות",
+    "בדיקת_קיום_ספרות_בשם_המלא",
+    "חודש_לידה_אזרחי",
+    "חישוב_מספר_הלידה",
+    "מספר_לידה_אזרחי",
+    "סכום_העיצורים_בשם",
+    "סכום_התנועות_בשם",
+    "שיעור_החיים_האזרחי",
+    "תקופת_המחזור_הראשון",
+    "תקופת_המחזור_השני"
+  ],
+  "interpretation_tables_added_count": 10,
+  "interpretation_tables_added_calculations": [
+    "calculate_life_cycle_position",
+    "karma_number",
+    "periodic_influences",
+    "חודש_לידה_אזרחי",
+    "חישוב_מספר_הלידה",
+    "מספר_לידה_אזרחי",
+    "סכום_התנועות_בשם",
+    "שיעור_החיים_האזרחי",
+    "תקופת_המחזור_הראשון",
+    "תקופת_המחזור_השני"
+  ],
+  "blocked_counts_by_reason_after": {
+    "unsupported_executor_type": 140,
+    "missing_input_mapping": 11,
+    "missing_formula": 9,
+    "missing_result_value_table": 1
+  },
+  "green_legacy_still_works": true,
+  "no_production_switch": true,
+  "no_second_book_added": true,
+  "no_ocr_work_started": true,
+  "no_broad_ui_redesign": true
+}

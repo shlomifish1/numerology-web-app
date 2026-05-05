@@ -257,10 +257,20 @@ def force_multiple_books(source: Path, pdf_files: Optional[List[Path]] = None) -
 # ---------------------------------------------------------------------------
 
 def _collect_pdfs(folder: Path) -> List[Path]:
-    """Return sorted list of PDF files directly inside *folder* (not recursive)."""
+    """Return sorted list of PDF files directly inside *folder* (not recursive).
+
+    Excludes scaffold-generated artifact files (``__merged_source.pdf``,
+    ``__source_manifest``, etc.) so that a second run on a folder that already
+    contains a merged PDF from a previous Phase B run is not confused.
+    """
     return sorted(
         f for f in folder.iterdir()
-        if f.is_file() and f.suffix.lower() in _VALID_PDF_SUFFIXES
+        if (
+            f.is_file()
+            and f.suffix.lower() in _VALID_PDF_SUFFIXES
+            # Ignore scaffold artifacts — double-underscore prefix marks them
+            and "__" not in f.stem
+        )
     )
 
 

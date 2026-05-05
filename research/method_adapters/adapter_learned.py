@@ -20,6 +20,17 @@ from book_ingestion.knowledge_store import KnowledgeStore
 from numerology_calculator import NumerologyCalculator
 
 
+def _normalize_corpus_key(value: object) -> str:
+    return (
+        str(value or "")
+        .strip()
+        .replace(" ", "_")
+        .replace("-", "_")
+        .replace("'", "")
+        .lower()
+    )
+
+
 class LearnedMethodAdapter(MethodAdapter):
     """
     Adapter for books that went through rule_extractor.
@@ -31,13 +42,35 @@ class LearnedMethodAdapter(MethodAdapter):
     def __init__(self, method_config: Dict[str, object]):
         super().__init__(method_config)
         self._store = KnowledgeStore()
-        self._corpus = str(method_config.get("folder") or method_config.get("key") or "")
+        candidates = []
+        seen = set()
+        for value in (
+            method_config.get("learned_corpus"),
+            method_config.get("folder"),
+            method_config.get("key"),
+        ):
+            text = str(value or "").strip()
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            candidates.append(text)
+            normalized = _normalize_corpus_key(text)
+            if normalized and normalized not in seen:
+                seen.add(normalized)
+                candidates.append(normalized)
+        self._candidate_corpora = candidates
+        self._corpus = candidates[0] if candidates else ""
         self._rules: dict[str, dict] | None = None
 
     def _load_rules(self) -> dict[str, dict]:
         if self._rules is None:
-            rows = self._store.get_book_rules(self._corpus)
-            self._rules = {r["concept_key"]: r for r in rows}
+            self._rules = {}
+            for candidate in self._candidate_corpora:
+                rows = self._store.get_book_rules(candidate)
+                if rows:
+                    self._corpus = candidate
+                    self._rules = {r["concept_key"]: r for r in rows}
+                    break
         return self._rules
 
     def analyze(
