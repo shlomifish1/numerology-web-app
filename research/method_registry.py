@@ -6,14 +6,42 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from interpretation_layout import RESEARCH_ROOT, ensure_layout_dirs, normalize_corpus_key
+from interpretation_layout import INTERPRETATIONS_ROOT, RESEARCH_ROOT, ensure_layout_dirs, normalize_corpus_key
 
-SKIP_FOLDERS = {"book_ingestion", "__pycache__", ".git", "raw_books", "runtime", "research"}
+SKIP_FOLDERS = {
+    "book_ingestion",
+    "__pycache__",
+    ".git",
+    "raw_books",
+    "runtime",
+    "research",
+    "men",
+    "women",
+}
 DEFAULT_CUSTOMER_FOLDERS: set[str] = set()
 INTERNAL_BASELINE_KEY = "legacy_runtime_internal"
 LEGACY_BASELINE_KEYS = {"pythagorean_existing"}
 STALE_METHOD_KEYS = {"research", "runtime", "more_books", "spirit", "astrology", "men", "women"}
 ADAPTER_BY_FOLDER: dict[str, str] = {}
+BOOK_SOURCE_EXTENSIONS = {
+    ".csv",
+    ".doc",
+    ".docx",
+    ".epub",
+    ".htm",
+    ".html",
+    ".jpeg",
+    ".jpg",
+    ".json",
+    ".md",
+    ".pdf",
+    ".png",
+    ".rtf",
+    ".txt",
+    ".webp",
+    ".xls",
+    ".xlsx",
+}
 
 
 class MethodRegistry:
@@ -56,16 +84,43 @@ class MethodRegistry:
             "notes": "",
         }
 
+    def _has_book_content(self, folder_path: Path) -> bool:
+        has_catalog = any(folder_path.rglob("*__draft_catalog.json"))
+        if has_catalog:
+            return True
+        return any(
+            path.is_file() and path.suffix.lower() in BOOK_SOURCE_EXTENSIONS
+            for path in folder_path.rglob("*")
+        )
+
+    def _append_unique_book_folder(self, folders_by_key: Dict[str, Path], folder_path: Path) -> None:
+        if not folder_path.is_dir() or folder_path.name in SKIP_FOLDERS:
+            return
+        if not self._has_book_content(folder_path):
+            return
+        key = self._normalize_key(folder_path.name)
+        if not key or key in folders_by_key:
+            return
+        folders_by_key[key] = folder_path
+
     def _iter_research_book_folders(self) -> List[Path]:
-        if not self.base_path.exists():
-            return []
+        folders_by_key: Dict[str, Path] = {}
+        if self.base_path.exists():
+            for folder_path in sorted(self.base_path.iterdir()):
+                self._append_unique_book_folder(folders_by_key, folder_path)
+
+        # Drive sync can place a folder that contains many book folders under
+        # interpretations/<source name>/<book name>. Surface those books too.
+        if INTERPRETATIONS_ROOT.exists():
+            for container_path in sorted(INTERPRETATIONS_ROOT.iterdir()):
+                if not container_path.is_dir() or container_path.name in SKIP_FOLDERS:
+                    continue
+                for folder_path in sorted(container_path.iterdir()):
+                    self._append_unique_book_folder(folders_by_key, folder_path)
+
         folders: List[Path] = []
-        for folder_path in sorted(self.base_path.iterdir()):
+        for folder_path in sorted(folders_by_key.values()):
             if not folder_path.is_dir() or folder_path.name in SKIP_FOLDERS:
-                continue
-            has_book_pdfs = any(folder_path.glob("*.pdf"))
-            has_catalog = any(folder_path.glob("*__draft_catalog.json"))
-            if not has_book_pdfs and not has_catalog:
                 continue
             folders.append(folder_path)
         return folders
