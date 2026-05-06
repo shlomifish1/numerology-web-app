@@ -327,19 +327,25 @@ class DriveSync:
         finally:
             fh.close()
 
-    def _download_file(self, item: Dict[str, Any], destination_dir: Path) -> Path:
-        file_id = str(item["id"])
+    def _resolve_target_path(self, item: Dict[str, Any], destination_dir: Path) -> Path:
         name = self._safe_filename(str(item.get("name") or "drive_file"))
         mime_type = str(item.get("mimeType") or "")
+        if mime_type in GOOGLE_EXPORTS:
+            _, export_ext = GOOGLE_EXPORTS[mime_type]
+            target_name = Path(name).stem + export_ext
+            return destination_dir / target_name
+        return destination_dir / name
+
+    def _download_file(self, item: Dict[str, Any], destination_dir: Path) -> Path:
+        file_id = str(item["id"])
+        mime_type = str(item.get("mimeType") or "")
+        target_path = self._resolve_target_path(item, destination_dir)
 
         if mime_type in GOOGLE_EXPORTS:
-            export_mime, export_ext = GOOGLE_EXPORTS[mime_type]
-            target_name = Path(name).stem + export_ext
-            target_path = destination_dir / target_name
+            export_mime, _ = GOOGLE_EXPORTS[mime_type]
             self._export_media(file_id, export_mime, target_path)
             return target_path
 
-        target_path = destination_dir / name
         self._download_media(file_id, target_path)
         return target_path
 
@@ -355,6 +361,7 @@ class DriveSync:
         level: int = 0,
         top_level_resolutions: Optional[Dict[str, str]] = None,
         is_root: bool = False,
+        preserve_existing: bool = False,
     ) -> None:
         destination.mkdir(parents=True, exist_ok=True)
         for item in self._list_children(folder_id):
@@ -367,17 +374,27 @@ class DriveSync:
                     conflict_key = self._normalise_conflict_name(raw_name)
                     resolution = str(top_level_resolutions.get(conflict_key) or "sync").strip()
                     if resolution == "skip":
+                        child_dir = destination / child_dir_name
                         manifest.append(
                             {
                                 "id": item.get("id"),
                                 "name": item.get("name"),
                                 "mimeType": mime_type,
-                                "local_path": "",
+                                "local_path": str(child_dir),
                                 "modifiedTime": item.get("modifiedTime"),
                                 "size": item.get("size"),
                                 "level": level,
-                                "action": "skipped_by_resolution",
+                                "action": "merged_keep_local",
                             }
+                        )
+                        self._sync_folder(
+                            str(item["id"]),
+                            child_dir,
+                            manifest,
+                            level=level + 1,
+                            top_level_resolutions=None,
+                            is_root=False,
+                            preserve_existing=True,
                         )
                         continue
                     if resolution.startswith("rename:"):
@@ -392,10 +409,26 @@ class DriveSync:
                     level=level + 1,
                     top_level_resolutions=None,
                     is_root=False,
+                    preserve_existing=preserve_existing,
                 )
                 continue
 
             try:
+                target_path = self._resolve_target_path(item, destination)
+                if preserve_existing and target_path.exists():
+                    manifest.append(
+                        {
+                            "id": item.get("id"),
+                            "name": item.get("name"),
+                            "mimeType": mime_type,
+                            "local_path": str(target_path),
+                            "modifiedTime": item.get("modifiedTime"),
+                            "size": item.get("size"),
+                            "level": level,
+                            "action": "kept_local_existing",
+                        }
+                    )
+                    continue
                 downloaded_path = self._download_file(item, destination)
                 manifest.append(
                     {
