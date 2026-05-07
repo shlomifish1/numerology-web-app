@@ -15,6 +15,9 @@ SKIP_FOLDERS = {
     "raw_books",
     "runtime",
     "research",
+    "_trash_books",
+    "_deleted_books",
+    "_removed_books",
     "men",
     "women",
 }

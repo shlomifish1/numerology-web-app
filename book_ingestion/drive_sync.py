@@ -373,6 +373,20 @@ class DriveSync:
                     raw_name = str(item.get("name") or "")
                     conflict_key = self._normalise_conflict_name(raw_name)
                     resolution = str(top_level_resolutions.get(conflict_key) or "sync").strip()
+                    if resolution in {"deleted", "delete_skip", "skip_deleted"}:
+                        manifest.append(
+                            {
+                                "id": item.get("id"),
+                                "name": item.get("name"),
+                                "mimeType": mime_type,
+                                "local_path": "",
+                                "modifiedTime": item.get("modifiedTime"),
+                                "size": item.get("size"),
+                                "level": level,
+                                "action": "skipped_deleted_local",
+                            }
+                        )
+                        continue
                     if resolution == "skip":
                         child_dir = destination / child_dir_name
                         manifest.append(
