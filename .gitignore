@@ -35,4 +35,42 @@ ENV/
 save_data/
 credentials.json
 credentials_old.json
-tok
+token.pickle
+replay_pid*.log
+*.spec
+
+# Large data files — not for git
+*.pdf
+*.db
+*.sqlite
+
+# Interpretations data (PDFs, runtime text, large corpora)
+# These are managed via Google Drive sync, not git
+interpretations/drive_primary_books/
+interpretations/runtime/
+interpretations/research/*/artifacts/
+interpretations/research/*/נומרולוגיה*/
+interpretations/research/*/לי_ברגמן*/
+interpretations/research/*/לי ברגמן*/
+
+# Research artifacts (auto-generated JSON — large)
+interpretations/research/**/__source_corpus.txt
+interpretations/research/**/*__calc_candidates.json
+interpretations/research/**/*__draft_catalog.json
+interpretations/research/**/*__reviewed_catalog.json
+interpretations/research/**/*__chapter_inventory.json
+interpretations/research/**/*__source_manifest.json
+interpretations/research/**/*__definition_candidate.json
+interpretations/research/**/*__review_report.json
+interpretations/research/**/*__weak_review_report.json
+interpretations/research/**/*__weak_review_report.md
+
+# Spirit data
+spirit/
+
+# Images
+image/
+
+# Temp / build
+exemple/
+build/

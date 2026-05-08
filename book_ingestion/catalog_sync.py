@@ -65,6 +65,21 @@ KNOWN_FOLDER_CONFIGS: Dict[str, Dict[str, object]] = {
             "map": "astrology_category_map.md",
         },
     },
+    # ─── ספרי מחקר ─────────────────────────────────────────────────────────
+    "נומרולוגיה של האלף השלישי": {
+        "corpus": "third_millennium",
+        "method": "generic",
+        "extras": {
+            "catalog": "third_millennium_books.md",
+        },
+    },
+    "לי ברגמן שרה ברק אלי מורג נומרולוגיה": {
+        "corpus": "bergman_barak_morag",
+        "method": "generic",
+        "extras": {
+            "catalog": "bergman_barak_morag_books.md",
+        },
+    },
 }
 
 
@@ -103,10 +118,30 @@ def _build_folder_config(folder: Path) -> Dict[str, str]:
     return config
 
 
+def _warn_windows_shortcuts(root: Path) -> None:
+    """Detect Windows shortcut (.lnk) files and log a warning — they are silently
+    skipped by ``folder.is_dir()`` checks and the user may not realise their book
+    was never registered.
+    """
+    import logging
+    _log = logging.getLogger(__name__)
+    try:
+        for item in sorted(root.iterdir()):
+            if item.suffix.lower() == ".lnk":
+                _log.warning(
+                    "Windows shortcut detected in research folder and will be IGNORED: %s\n"
+                    "  → Copy the actual book folder here instead of using a shortcut.",
+                    item,
+                )
+    except Exception:
+        pass
+
+
 def _discover_folder_corpora() -> Dict[str, Dict[str, str]]:
     discovered: Dict[str, Dict[str, str]] = {}
     if not DISCOVERY_ROOT.exists():
         return discovered
+    _warn_windows_shortcuts(DISCOVERY_ROOT)
     for folder in sorted(DISCOVERY_ROOT.iterdir()):
         if not folder.is_dir() or folder.name in SKIP_FOLDERS:
             continue
