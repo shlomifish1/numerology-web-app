@@ -69,6 +69,9 @@ _MIN_AVG_HEB_RATIO = 0.30
 _MAX_RESCAN_PAGES = 0
 
 _FREE_MODEL_SEQUENCE = [
+    "ollama_gemma4_e4b",
+    "ollama_gemma4_26b",
+    "ollama_qwen3_vl_8b",
     "groq_llama3",
     "gemini_2_flash",
     "google_gemini",
@@ -77,7 +80,6 @@ _FREE_MODEL_SEQUENCE = [
     "hf_gemma4_31b",
     "hf_qwen_coder",
     "hf_deepseek_r1",
-    "ollama_gemma4_31b",
     "groq_instant",
 ]
 
