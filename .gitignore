@@ -26,6 +26,7 @@ venv/
 venv1/
 venv2/
 ENV/
+.venv_server*/
 
 # IDEs
 .idea/
@@ -48,13 +49,17 @@ replay_pid*.log
 # Books are moved manually to interpretations/books on each machine, not synced by the app.
 interpretations/books/
 interpretations/drive_primary_books/
+interpretations/_drive_sync_manifest.json
+interpretations/_trash_books/
 interpretations/runtime/
+interpretations/research/
 interpretations/research/*/artifacts/
 interpretations/research/*/נומרולוגיה*/
 interpretations/research/*/לי_ברגמן*/
 interpretations/research/*/לי ברגמן*/
 
 # Research artifacts (auto-generated JSON — large)
+research/method_registry.local.json
 interpretations/research/**/__source_corpus.txt
 interpretations/research/**/*__calc_candidates.json
 interpretations/research/**/*__draft_catalog.json

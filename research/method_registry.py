@@ -6,7 +6,13 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from interpretation_layout import MAIN_MAP_BOOK_FOLDER, RESEARCH_ROOT, ensure_layout_dirs, normalize_corpus_key
+from interpretation_layout import (
+    MAIN_MAP_BOOK_FOLDER,
+    PROJECT_ROOT,
+    RESEARCH_ROOT,
+    ensure_layout_dirs,
+    normalize_corpus_key,
+)
 
 SKIP_FOLDERS = {
     "book_ingestion",
@@ -55,16 +61,21 @@ class MethodRegistry:
         ensure_layout_dirs()
         self.base_path = RESEARCH_ROOT
         self.registry_file = research_dir / "method_registry.json"
+        self.local_registry_file = research_dir / "method_registry.local.json"
         self._methods: Dict[str, Dict[str, object]] = {}
         self._load_registry()
         self.refresh()
 
     def _load_registry(self) -> None:
-        if self.registry_file.exists():
-            self._methods = json.loads(self.registry_file.read_text(encoding="utf-8"))
+        self._methods = {}
+        for registry_file in (self.registry_file, self.local_registry_file):
+            if registry_file.exists():
+                loaded = json.loads(registry_file.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    self._methods.update(loaded)
 
     def _save_registry(self) -> None:
-        self.registry_file.write_text(
+        self.local_registry_file.write_text(
             json.dumps(self._methods, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
@@ -72,12 +83,19 @@ class MethodRegistry:
     def _normalize_key(self, folder_name: str) -> str:
         return normalize_corpus_key(folder_name)
 
+    def _runtime_folder_path(self, folder_path: Path) -> str:
+        try:
+            relative = folder_path.resolve().relative_to(PROJECT_ROOT.resolve())
+            return "/".join(relative.parts)
+        except ValueError:
+            return str(folder_path)
+
     def _build_folder_method(self, folder_path: Path) -> Dict[str, object]:
         folder_name = folder_path.name
         return {
             "key": self._normalize_key(folder_name),
             "folder": folder_name,
-            "folder_path": str(folder_path),
+            "folder_path": self._runtime_folder_path(folder_path),
             "display_name": folder_name,
             "adapter": ADAPTER_BY_FOLDER.get(folder_name, "generic"),
             "enabled_for_research": True,
@@ -135,7 +153,7 @@ class MethodRegistry:
                 method = self._methods[key]
                 updates = {
                     "folder": folder_path.name,
-                    "folder_path": str(folder_path),
+                    "folder_path": self._runtime_folder_path(folder_path),
                     "display_name": folder_path.name,
                     "adapter": adapter,
                     "enabled_for_research": True,

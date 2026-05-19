@@ -6,6 +6,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Dict, Iterable, List
 
+from interpretation_layout import PROJECT_ROOT
+
 
 THEME_KEYWORDS = {
     "intuition": ["psychic", "intuition", "third eye", "pineal", "remote viewing", "lucid", "astral"],
@@ -52,6 +54,8 @@ def _language_mix(paths: Iterable[Path]) -> str:
 
 def analyze_corpus(folder_path: str) -> Dict[str, object]:
     folder = Path(folder_path)
+    if not folder.is_absolute():
+        folder = PROJECT_ROOT / folder
     files = []
     if folder.exists():
         for path in folder.rglob('*'):
