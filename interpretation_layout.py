@@ -13,11 +13,14 @@ def _resolve_project_root() -> Path:
 
 PROJECT_ROOT = _resolve_project_root()
 INTERPRETATIONS_ROOT = PROJECT_ROOT / "interpretations"
+BOOKS_ROOT = INTERPRETATIONS_ROOT / "books"
+MAIN_MAP_BOOK_FOLDER = "\u05d4\u05d7\u05e9\u05d5\u05d1\u05d9\u05dd \u05d1\u05d9\u05d5\u05ea\u05e8"
+MAIN_MAP_BOOKS_ROOT = BOOKS_ROOT / MAIN_MAP_BOOK_FOLDER
 RUNTIME_ROOT = INTERPRETATIONS_ROOT / "runtime"
 RUNTIME_LEGACY_ROOT = RUNTIME_ROOT / "legacy"
 RUNTIME_BOOKS_ROOT = RUNTIME_ROOT / "books"
-RESEARCH_ROOT = INTERPRETATIONS_ROOT / "research"
-RESEARCH_RAW_BOOKS_ROOT = RESEARCH_ROOT / "raw_books"
+RESEARCH_ROOT = BOOKS_ROOT
+RESEARCH_RAW_BOOKS_ROOT = BOOKS_ROOT / "raw_books"
 
 
 def normalize_corpus_key(value: object) -> str:
@@ -43,11 +46,8 @@ def sanitize_folder_name(value: object) -> str:
 def ensure_layout_dirs() -> None:
     for path in (
         INTERPRETATIONS_ROOT,
-        RUNTIME_ROOT,
-        RUNTIME_LEGACY_ROOT,
-        RUNTIME_BOOKS_ROOT,
+        BOOKS_ROOT,
         RESEARCH_ROOT,
-        RESEARCH_RAW_BOOKS_ROOT,
     ):
         path.mkdir(parents=True, exist_ok=True)
 
@@ -85,15 +85,8 @@ def runtime_interpretation_file_candidates(
         else [Path(current_category) / current_file_name]
     )
     candidates: list[Path] = []
-    if book_name:
-        runtime_book_root = runtime_book_gender_dir(book_name, gender)
-        candidates.extend(runtime_book_root / tail for tail in tails)
-    runtime_legacy_root = runtime_legacy_gender_dir(gender)
-    candidates.extend(runtime_legacy_root / tail for tail in tails)
-
-    # Backward-compatible fallback for pre-migration layouts.
-    legacy_root = INTERPRETATIONS_ROOT / gender
-    candidates.extend(legacy_root / tail for tail in tails)
+    primary_root = MAIN_MAP_BOOKS_ROOT / gender
+    candidates.extend(primary_root / tail for tail in tails)
 
     unique: list[Path] = []
     seen: set[str] = set()
@@ -136,7 +129,7 @@ def runtime_source_label(
 def research_source_label(book_name_or_key: object, detail: object | None = None) -> str:
     parts = [
         "interpretations",
-        "research",
+        "books",
         sanitize_folder_name(book_name_or_key) or normalize_corpus_key(book_name_or_key),
     ]
     if detail is not None and str(detail).strip():
@@ -149,7 +142,7 @@ def source_label_to_corpus_alias(source: object) -> str:
     if not text.startswith("interpretations/"):
         return ""
     parts = [part for part in text.split("/") if part]
-    if len(parts) >= 3 and parts[1] == "research":
+    if len(parts) >= 3 and parts[1] in {"books", "research"}:
         return parts[2]
     if len(parts) >= 4 and parts[1] == "runtime" and parts[2] == "legacy":
         return parts[3]
@@ -177,7 +170,7 @@ def path_to_corpus_alias(path_value: object) -> str:
         return ""
 
     parts = list(relative.parts)
-    if len(parts) >= 2 and parts[0] == "research":
+    if len(parts) >= 2 and parts[0] in {"books", "research"}:
         return str(parts[1]).strip()
     if len(parts) >= 3 and parts[0] == "runtime" and parts[1] == "legacy":
         return str(parts[2]).strip()

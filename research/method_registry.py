@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from interpretation_layout import INTERPRETATIONS_ROOT, RESEARCH_ROOT, ensure_layout_dirs, normalize_corpus_key
+from interpretation_layout import MAIN_MAP_BOOK_FOLDER, RESEARCH_ROOT, ensure_layout_dirs, normalize_corpus_key
 
 SKIP_FOLDERS = {
     "book_ingestion",
@@ -20,6 +20,7 @@ SKIP_FOLDERS = {
     "_removed_books",
     "men",
     "women",
+    MAIN_MAP_BOOK_FOLDER,
 }
 DEFAULT_CUSTOMER_FOLDERS: set[str] = set()
 INTERNAL_BASELINE_KEY = "legacy_runtime_internal"
@@ -111,15 +112,6 @@ class MethodRegistry:
         if self.base_path.exists():
             for folder_path in sorted(self.base_path.iterdir()):
                 self._append_unique_book_folder(folders_by_key, folder_path)
-
-        # Drive sync can place a folder that contains many book folders under
-        # interpretations/<source name>/<book name>. Surface those books too.
-        if INTERPRETATIONS_ROOT.exists():
-            for container_path in sorted(INTERPRETATIONS_ROOT.iterdir()):
-                if not container_path.is_dir() or container_path.name in SKIP_FOLDERS:
-                    continue
-                for folder_path in sorted(container_path.iterdir()):
-                    self._append_unique_book_folder(folders_by_key, folder_path)
 
         folders: List[Path] = []
         for folder_path in sorted(folders_by_key.values()):

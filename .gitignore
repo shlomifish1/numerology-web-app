@@ -44,8 +44,9 @@ replay_pid*.log
 *.db
 *.sqlite
 
-# Interpretations data (PDFs, runtime text, large corpora)
-# These are managed via Google Drive sync, not git
+# Interpretation/book data (PDFs, runtime text, large corpora)
+# Books are moved manually to interpretations/books on each machine, not synced by the app.
+interpretations/books/
 interpretations/drive_primary_books/
 interpretations/runtime/
 interpretations/research/*/artifacts/
