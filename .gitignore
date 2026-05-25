@@ -47,7 +47,9 @@ replay_pid*.log
 
 # Interpretation/book data (PDFs, runtime text, large corpora)
 # Books are moved manually to interpretations/books on each machine, not synced by the app.
-interpretations/books/
+interpretations/books/**
+!interpretations/books/**/
+!interpretations/books/**/book_manifest.json
 interpretations/drive_primary_books/
 interpretations/_drive_sync_manifest.json
 interpretations/_trash_books/

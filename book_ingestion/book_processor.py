@@ -300,7 +300,7 @@ class BookProcessor:
             return True
         if '__' in name and path.suffix.lower() in {'.json', '.txt', '.md'}:
             return True
-        if name in {'manifest.json'}:
+        if name in {'manifest.json', 'book_manifest.json'}:
             return True
         return False
 
