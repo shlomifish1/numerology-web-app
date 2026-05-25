@@ -1862,10 +1862,10 @@ class BookIngestionRunner:
             )
         _write_json(self._quality_report_path, report)
         logger.info(
-            "[Stage 1] OCR quality report: %d/%d pages need rescan (avg heb=%.0f%%)",
+            "[Stage 1] OCR quality report: %d/%d pages need rescan (avg heb=%s)",
             len(pages_needing_rescan),
             len(pages),
-            (avg_ratio or 0.0) * 100,
+            f"{avg_ratio * 100:.0f}%" if avg_ratio is not None else "N/A (native text)",
         )
 
     def _log_stage(self, stage: str, info: Dict[str, Any]) -> None:
