@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "book_id": "misparei_bayit",
+  "book_title": "מספרי בית",
+  "profile_status": "draft",
+  "profile_updated_at": "2026-05-26",
+  "approved_calc_keys": ["house_number_basic"],
+  "pending_review_calc_keys": ["annual_house_frequency"],
+  "blocked_calc_keys": {
+    "house_number_address": "blocked_ambiguous_formula",
+    "house_weight_system_80_15_5": "blocked_missing_formula_or_incomplete_algorithm"
+  },
+  "knowledge_sources": {
+    "house_number_basic": {
+      "source_corpus": "interpretations/drive_primary_books/מספרי בית/artifacts/chapters/מספרי_בית/מספרי בית__source_corpus.txt",
+      "extraction_method": "fitz-native-full",
+      "extraction_type": "human_reviewed_manual_extraction",
+      "model_suggested": false,
+      "approved_by": "human_review",
+      "approved_at": "2026-05-26",
+      "values_approved": ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+      "definition_commit": "77546ff"
+    }
+  },
+  "runtime_status": {
+    "house_number_basic": {
+      "promoted": false,
+      "promoted_at": null,
+      "values_promoted": []
+    }
+  },
+  "model_assisted_learning_policy": {
+    "local_models_allowed_for_draft": true,
+    "cheap_api_allowed_for_draft": true,
+    "model_output_trusted_directly": false,
+    "human_review_required_before_definition": true,
+    "forbidden_sources": [
+      "batch_processed/מספרי_בית__deepseek_improved.txt"
+    ]
+  },
+  "notes": [
+    "deepseek_improved for this book was generated from empty corpus and must not be used.",
+    "annual_house_frequency appears extractable but should be handled in a separate review step.",
+    "house_number_address and house_weight_system_80_15_5 remain needs_review."
+  ]
+}
