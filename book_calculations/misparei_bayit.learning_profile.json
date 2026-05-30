@@ -24,9 +24,9 @@
   },
   "runtime_status": {
     "house_number_basic": {
-      "promoted": false,
-      "promoted_at": null,
-      "values_promoted": []
+      "promoted": true,
+      "promoted_at": "2026-05-30T09:19:11+00:00",
+      "values_promoted": ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
     }
   },
   "model_assisted_learning_policy": {
