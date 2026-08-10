@@ -1,0 +1,31 @@
+{
+    "api_keys": {
+        "google_ai": "",
+        "openai": "",
+        "hugging_face": ""
+    },
+    "models": [
+        {
+            "name": "gemini-flash-latest",
+            "provider": "google",
+            "display_name": "Gemini Flash (Latest)"
+        },
+        {
+            "name": "gemini-1.5-pro",
+            "provider": "google",
+            "display_name": "Gemini 1.5 Pro"
+        },
+        {
+            "name": "gpt-4o",
+            "provider": "openai",
+            "display_name": "GPT-4o"
+        },
+        {
+            "name": "gpt-4o-mini",
+            "provider": "openai",
+            "display_name": "GPT-4o Mini"
+        }
+    ],
+    "active_model": "gemini-flash-latest",
+    "drive_folder_id": "1hwxbvU8lsugqqIGP6yJHhLL5s5M_yKnG"
+}

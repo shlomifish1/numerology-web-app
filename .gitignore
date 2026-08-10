@@ -34,9 +34,13 @@ ENV/
 
 # Project Specific
 save_data/
+config.json
 credentials.json
 credentials_old.json
 token.pickle
+canva_connections.json
+canva_pkce_state.json
+canva_tokens.json
 replay_pid*.log
 *.spec
 
