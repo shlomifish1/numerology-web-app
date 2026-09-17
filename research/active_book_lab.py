@@ -7,7 +7,7 @@ from typing import Any, Iterable
 
 import streamlit as st
 
-from interpretation_layout import RESEARCH_ROOT, normalize_corpus_key
+from interpretation_layout import MAIN_MAP_BOOK_FOLDER, RESEARCH_ROOT, normalize_corpus_key
 from book_ingestion import WeakBookReviewOrchestrator
 
 try:
@@ -88,13 +88,25 @@ def _ensure_valid_session_choice(session_key: str, options: Iterable[Any]) -> No
         del st.session_state[session_key]
 
 
+_EXCLUDED_BOOK_DIRS = {
+    MAIN_MAP_BOOK_FOLDER,
+    "men",
+    "women",
+    "drive_primary_books",
+    "raw_books",
+    "_trash_books",
+    "research",
+    "runtime",
+}
+
+
 def _book_dir_candidates() -> list[Path]:
     if not RESEARCH_ROOT.exists():
         return []
     return sorted(
         path
         for path in RESEARCH_ROOT.iterdir()
-        if path.is_dir() and path.name != "raw_books"
+        if path.is_dir() and path.name not in _EXCLUDED_BOOK_DIRS
     )
 
 

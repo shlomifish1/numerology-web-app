@@ -31,6 +31,22 @@ def _default_payload() -> dict[str, object]:
     }
 
 
+def _sanitize_json_keys(obj: Any) -> Any:
+    """Drop None dict keys (and stringify other non-str keys) recursively.
+    Some calculator traces (e.g. leap_year_adjustment's subject_inputs_used)
+    carry a None key, which breaks json.dumps(sort_keys=True) in the store
+    with `'<' not supported between instances of 'str' and 'NoneType'`."""
+    if isinstance(obj, dict):
+        return {
+            (k if isinstance(k, str) else str(k)): _sanitize_json_keys(v)
+            for k, v in obj.items()
+            if k is not None
+        }
+    if isinstance(obj, list):
+        return [_sanitize_json_keys(v) for v in obj]
+    return obj
+
+
 def _trace_is_full(trace: Mapping[str, Any] | None, computed_value: Any) -> bool:
     if not isinstance(trace, Mapping):
         return False
@@ -244,7 +260,7 @@ def run_subject_map(payload: dict[str, object]) -> dict[str, object]:
                 "scope": scope,
                 "result_group": group,
                 "trace_is_full": trace_is_full,
-                "execution_trace": execution_trace if isinstance(execution_trace, dict) else {},
+                "execution_trace": _sanitize_json_keys(execution_trace) if isinstance(execution_trace, dict) else {},
             }
         )
 

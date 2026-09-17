@@ -445,15 +445,50 @@ class KnowledgeStore:
 
     def set_learning_status(self, corpus: str, status: str, progress: str = "",
                             error: str = "") -> None:
+        """Record a learning-status transition for a corpus.
+
+        For ``status='running'`` updates the most recent existing 'running' row for
+        the corpus instead of appending a new one. This prevents progress-tick spam
+        from bloating the table (a single indexing sweep used to emit one INSERT per
+        file scanned, producing 100k+ rows for large corpora). Terminal transitions
+        ('done', 'error', 'pending') always append a new row so the history is
+        preserved.
+        """
         now = datetime.utcnow().isoformat()
         with self._connect() as conn:
-            conn.execute("""
-                INSERT INTO book_learning_log (corpus, status, progress, error, started_at, finished_at, created_at)
-                VALUES (?,?,?,?,?,?,?)
-            """, (corpus, status, progress, error,
-                  now if status == "running" else None,
-                  now if status in ("done", "error") else None,
-                  now))
+            if status == "running":
+                # Try to update the latest existing running row for this corpus.
+                cur = conn.execute(
+                    """
+                    UPDATE book_learning_log
+                       SET progress    = ?,
+                           error       = ?,
+                           started_at  = COALESCE(started_at, ?),
+                           created_at  = ?
+                     WHERE id = (
+                         SELECT id FROM book_learning_log
+                          WHERE corpus = ? AND status = 'running'
+                       ORDER BY id DESC
+                          LIMIT 1
+                     )
+                    """,
+                    (progress, error, now, now, corpus),
+                )
+                if cur.rowcount > 0:
+                    return
+            conn.execute(
+                """
+                INSERT INTO book_learning_log
+                    (corpus, status, progress, error, started_at, finished_at, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    corpus, status, progress, error,
+                    now if status == "running" else None,
+                    now if status in ("done", "error") else None,
+                    now,
+                ),
+            )
 
     def get_learning_status(self, corpus: str) -> Optional[Dict[str, object]]:
         with self._connect() as conn:

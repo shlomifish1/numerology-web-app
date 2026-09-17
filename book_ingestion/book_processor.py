@@ -65,7 +65,31 @@ class BookProcessor:
         return {'book_id': book_id, 'record': record, 'metadata': metadata}
 
     def index_corpus(self, corpus: str, folder_path: str, method: Optional[str] = None) -> List[Dict[str, object]]:
-        folder = Path(folder_path)
+        # Defensive: never index a folder that looks like a project / Python install root.
+        # Path("") and Path(".") both resolve to the CWD, which historically caused
+        # legacy_runtime_internal (folder_path=None) to scan the entire ai_agents tree
+        # including .venv_server312/Lib/site-packages — producing tens of thousands of
+        # garbage book rows. Refuse such folders here as a safety net.
+        raw_path = str(folder_path or "").strip()
+        if not raw_path or raw_path in {".", "./"}:
+            raise ValueError(
+                f"index_corpus refused: folder_path is empty for corpus={corpus!r}"
+            )
+        folder = Path(raw_path).resolve()
+        forbidden_parts = {".venv", ".venv_server312", "site-packages", "__pycache__", ".git"}
+        parts_lower = {str(part).lower() for part in folder.parts}
+        if parts_lower & {p.lower() for p in forbidden_parts}:
+            raise ValueError(
+                f"index_corpus refused: folder_path looks like project/venv internals "
+                f"({folder}). corpus={corpus!r}"
+            )
+        # Refuse the entire ai_agents project root or any ancestor of this module.
+        module_dir = Path(__file__).resolve()
+        for ancestor in [module_dir] + list(module_dir.parents):
+            if folder == ancestor:
+                raise ValueError(
+                    f"index_corpus refused: folder_path ({folder}) is the project tree."
+                )
         results = []
         valid_sources: List[str] = []
         if folder.is_file():

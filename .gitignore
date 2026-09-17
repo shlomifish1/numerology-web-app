@@ -86,3 +86,12 @@ image/
 # Temp / build
 exemple/
 build/
+
+# Local/runtime research artifacts
+*.bak*
+.tmp_runtime_preview/
+_mapper_drafts/
+_archive_md/
+interpretations/for later/
+interpretations/synthesis/
+research/reviewed_extractions/

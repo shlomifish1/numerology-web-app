@@ -5,13 +5,24 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from interpretation_layout import RESEARCH_ROOT, normalize_corpus_key, source_label_to_corpus_alias
+from interpretation_layout import MAIN_MAP_BOOK_FOLDER, RESEARCH_ROOT, normalize_corpus_key, source_label_to_corpus_alias
 
 from .final_map_store import FinalMapStore
 from .method_registry import INTERNAL_BASELINE_KEY, MethodRegistry
 
 
 _LEGACY_RUNTIME_ALIASES = {"men", "women"}
+
+_EXCLUDED_BOOK_DIRS = {
+    MAIN_MAP_BOOK_FOLDER,
+    "men",
+    "women",
+    "drive_primary_books",
+    "raw_books",
+    "_trash_books",
+    "research",
+    "runtime",
+}
 _STALE_SOURCE_TOKENS = {
     "interpretations/astrology",
     "interpretations/spirit",
@@ -27,7 +38,7 @@ def _active_research_book_aliases() -> set[str]:
     if not RESEARCH_ROOT.exists():
         return aliases
     for folder in RESEARCH_ROOT.iterdir():
-        if not folder.is_dir() or folder.name == "raw_books":
+        if not folder.is_dir() or folder.name in _EXCLUDED_BOOK_DIRS:
             continue
         aliases.add(folder.name)
         aliases.add(normalize_corpus_key(folder.name))
