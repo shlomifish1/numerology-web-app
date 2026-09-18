@@ -421,47 +421,47 @@ def main():
                     type="primary"
                 )
 
-        map_tab, lab_tab, books_tab = st.tabs(["??? ?????", "?????", "?????"])
+        map_tab, lab_tab, books_tab = st.tabs(["מפה אישית", "מעבדת מחקר", "ספרים פעילים"])
 
         with map_tab:
-            st.caption("???? ?????? ????? ?? ???? ???? ???? men/women ?-runtime.")
-            main_tab, peaks_tab, meanings_tab = st.tabs(["??????", "????? ????? ??????", "????? ??????? ????? ??????"])
+            st.caption("המפה האישית הפעילה מתוך מקורות men/women ב-runtime.")
+            main_tab, peaks_tab, meanings_tab = st.tabs(["ראשי", "פסגות ואתגרים", "משמעויות מורחבות"])
 
             with main_tab:
                 col1, col2, col3 = st.columns(3)
 
                 with col1:
                     st.image("https://img.icons8.com/color/96/numerology.png", width=64)
-                    st.metric("???? ?????", calc.final_number_destiny)
-                    with st.expander("????? ???? ?????"):
+                    st.metric("מספר ייעוד (גורל)", calc.final_number_destiny)
+                    with st.expander("פירוש מספר ייעוד"):
                         _render_runtime_interpretation(calc, "destiny", calc.final_number_destiny, gender_key)
 
                 with col2:
-                    st.metric("??? ?????", calc.shana_ishit)
-                    with st.expander("????? ??? ?????"):
+                    st.metric("שנה אישית", calc.shana_ishit)
+                    with st.expander("פירוש שנה אישית"):
                         _render_runtime_interpretation(calc, "personal_year", calc.shana_ishit, gender_key)
 
                 with col3:
-                    st.metric("??? ????", calc.p_day)
-                    with st.expander("????? ??? ????"):
-                        st.write(f"??? ????/?????: {calc.p_day}")
+                    st.metric("יום לידה", calc.p_day)
+                    with st.expander("פירוש יום לידה"):
+                        st.write(f"יום לידה/צמצום: {calc.p_day}")
                         _render_runtime_interpretation(calc, "birth_day", calc.p_day, gender_key)
 
-                st.markdown("### ??? ?????")
+                st.markdown("### מפה אישית")
                 c1, c2, c3, c4 = st.columns(4)
-                c1.metric("?? ????", calc.first_name_val)
-                c2.metric("?? ???", calc.full_name_val)
-                c3.metric("????? ??????", calc.itzurim_val)
-                c4.metric("??????", calc.aiv_val)
+                c1.metric("שם פרטי", calc.first_name_val)
+                c2.metric("שם מלא (שאיפה)", calc.full_name_val)
+                c3.metric("עיצורים (רושם)", calc.itzurim_val)
+                c4.metric("תנועות (נשמה)", calc.aiv_val)
 
             with peaks_tab:
-                st.subheader("?????, ?????? ????? ????? ??????")
+                st.subheader("פסגות ואתגרים בחיי האדם")
                 _render_peak_challenge_grid(calc, gender_key)
 
             with meanings_tab:
-                st.info("??? ?????? ????? ????? ?????? ???? ???? ?-runtime ????.")
+                st.info("כאן יופיעו ניתוחי עומק נוספים (ריבוע פיתגורס, רבעונים ועוד).")
                 if calc.shana_nisteret:
-                    st.write(f"**??? ?????:** {calc.shana_nisteret}")
+                    st.write(f"**שנה נסתרת:** {calc.shana_nisteret}")
                     _render_runtime_interpretation(
                         calc,
                         "hidden_year",
@@ -471,11 +471,11 @@ def main():
                     )
 
         with lab_tab:
-            st.caption("?????? ????? ?? ???? ???? ???? ???? interpretations/research.")
+            st.caption("מעבדת מחקר עבור ספרי המחקר הפעילים.")
             render_lab_panel(prefix="web_lab", calc=calc)
 
         with books_tab:
-            st.caption("?????? ?????? ?????? ????? ????? ?????? ????? ??????.")
+            st.caption("תוצאות ספר לנבדק הפעיל ונתוני הספרים הפעילים.")
             render_live_books_panel(prefix="web_books", calc=calc)
 
     else:

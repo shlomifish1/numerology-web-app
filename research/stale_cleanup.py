@@ -78,7 +78,7 @@ def _source_is_valid(source_ref: Any, active_aliases: set[str]) -> bool:
     if lowered.startswith("interpretations/runtime/legacy/"):
         alias = source_label_to_corpus_alias(lowered)
         return alias in _LEGACY_RUNTIME_ALIASES
-    if lowered.startswith("interpretations/research/"):
+    if lowered.startswith(("interpretations/research/", "interpretations/books/")):
         alias = source_label_to_corpus_alias(lowered)
         return bool(alias) and (
             alias in active_aliases or normalize_corpus_key(alias) in active_aliases

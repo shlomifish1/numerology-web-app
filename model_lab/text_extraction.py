@@ -53,6 +53,13 @@ _FORMAT_EXTENSION_MAP: dict[str, str] = {
 
 _EPUB_CONTENT_EXTENSIONS = (".xhtml", ".html", ".htm")
 _HTML_SKIP_TAGS = {"script", "style"}
+_HTML_BLOCK_TAGS = {
+    "address", "article", "aside", "blockquote", "caption", "dd", "details",
+    "dialog", "div", "dl", "dt", "fieldset", "figcaption", "figure", "footer",
+    "form", "h1", "h2", "h3", "h4", "h5", "h6", "header", "hgroup", "hr",
+    "li", "main", "nav", "ol", "p", "pre", "section", "summary", "table",
+    "tbody", "td", "tfoot", "th", "thead", "tr", "ul",
+}
 
 VALID_EXTRACTION_METHODS = {"txt_native", "epub_native", "pdf_native", "unsupported"}
 VALID_EXTRACTION_STATUSES = {"pass", "warn", "fail", "unsupported"}
@@ -113,10 +120,18 @@ class _HTMLTextExtractor(HTMLParser):
     def handle_starttag(self, tag: str, attrs) -> None:
         if tag.lower() in _HTML_SKIP_TAGS:
             self._skip_depth += 1
+        elif self._skip_depth == 0 and (tag in _HTML_BLOCK_TAGS or tag == "br"):
+            self._append_separator()
 
     def handle_endtag(self, tag: str) -> None:
         if tag.lower() in _HTML_SKIP_TAGS and self._skip_depth > 0:
             self._skip_depth -= 1
+        elif self._skip_depth == 0 and tag in _HTML_BLOCK_TAGS:
+            self._append_separator()
+
+    def _append_separator(self) -> None:
+        if self._chunks and not self._chunks[-1].endswith("\n"):
+            self._chunks.append("\n")
 
     def handle_data(self, data: str) -> None:
         if self._skip_depth == 0:

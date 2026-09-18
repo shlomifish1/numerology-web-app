@@ -234,6 +234,14 @@ check("module only imports stdlib + book_job_record + optional fitz", all(
 
 # ── Optional: EPUB simple extraction (implemented with stdlib zipfile+HTML) ─
 print("\n[9] EPUB extraction — minimal stdlib zipfile + HTML stripping:")
+block_html = "<h1>Title</h1><p>First paragraph.</p><p>Second paragraph.</p>"
+check("HTML blocks preserve meaningful separators",
+      te._strip_html(block_html).strip() == "Title\nFirst paragraph.\nSecond paragraph.")
+check("HTML line breaks preserve separators",
+      te._strip_html("First<br>Second<br/>Third") == "First\nSecond\nThird")
+check("inline formatting does not split words or add spaces",
+      te._strip_html("<p>un<strong>break</strong>able <em>text</em>.</p>").strip()
+      == "unbreakable text.")
 tmp_dir = tempfile.mkdtemp(prefix="text_extraction_epub_test_")
 try:
     epub_path = _make_epub(tmp_dir, "book.epub", [
